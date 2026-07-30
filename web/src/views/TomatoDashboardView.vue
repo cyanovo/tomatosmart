@@ -1,6 +1,6 @@
 <template>
-  <div class="strawberry-dashboard layout-container">
-    <PageHeader title="草莓驾驶舱" :show-border="true">
+  <div class="tomato-dashboard layout-container">
+    <PageHeader title="番茄驾驶舱" :show-border="true">
       <template #info>
         <PageAgentDropdown default-agent="dashboard-analyzer" />
         <span class="live-pill">
@@ -14,13 +14,13 @@
       <section class="hero-panel">
         <img
           class="hero-image"
-          src="/images/Strawberry/strawberry-greenhouse-hero.png"
-          alt="草莓智能温室"
+          src="/images/Tomato/tomato-greenhouse-hero.png"
+          alt="番茄智能温室"
         />
         <div class="hero-overlay"></div>
         <div class="hero-copy">
           <p class="eyebrow">今日生产态势</p>
-          <h2>红颜草莓 A 区处于膨果期，环境状态稳定</h2>
+          <h2>红番茄 A 区处于膨果期，环境状态稳定</h2>
           <p class="hero-desc">AI 已根据温室环境、水培营养液与农事任务生成今日调控建议。</p>
         </div>
         <div class="hero-metrics">
@@ -39,8 +39,8 @@
           </div>
           <div class="zone-visual">
             <img
-              src="/images/Strawberry/strawberry-zone-overview.png"
-              alt="草莓温室棚区总览"
+              src="/images/Tomato/tomato-zone-overview.png"
+              alt="番茄温室棚区总览"
             />
             <div class="zone-status">
               <span>A 区 稳定</span>
@@ -102,8 +102,8 @@
           </div>
           <img
             class="growth-image"
-            src="/images/Strawberry/strawberry-growth-stages.png"
-            alt="草莓生长阶段"
+            src="/images/Tomato/tomato-growth-stages.png"
+            alt="番茄生长阶段"
           />
           <div class="growth-stats">
             <div>
@@ -187,7 +187,7 @@ async function loadAiSuggestions() {
     let env = '当前温室环境数据：\n'
     if (a) env += `空气：温度 ${a.temp}°C，湿度 ${a.humidity}%，CO2 ${a.co2}ppm，光照 ${a.illumination}lx\n`
     if (s) env += `土壤：pH ${s.ph_value}，EC ${(s.soil_conductivity / 1000).toFixed(1)}mS/cm，温度 ${s.soil_temperature}°C，湿度 ${s.soil_moisture}%，氮${s.nitrogen} 磷${s.phosphorus} 钾${s.potassium} mg/L\n`
-    env += `\n草莓适宜：温度22-28°C，湿度60-75%，CO2 500-900ppm，光照15000-25000lx，pH 5.8-6.5，EC 1.4-2.2mS/cm。`
+    env += `\n番茄适宜：温度22-28°C，湿度60-75%，CO2 500-900ppm，光照15000-25000lx，pH 5.8-6.5，EC 1.4-2.2mS/cm。`
     env += `\n卡片空间有限！给出3条建议，每条格式：【标题】描述。标题≤8字，描述≤50字。有异常标预警。`
 
     // 确保使用温室总管
@@ -309,7 +309,7 @@ onMounted(async () => {
 </script>
 
 <style scoped lang="less">
-.strawberry-dashboard {
+.tomato-dashboard {
   min-height: 100%;
   background: var(--gray-25);
 }

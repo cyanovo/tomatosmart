@@ -59,7 +59,7 @@
           <aside class="hero-visual reveal-up delay-1">
             <div class="visual-card">
               <div class="visual-glow" aria-hidden="true"></div>
-              <div class="strawberry-illustration" aria-hidden="true">
+              <div class="tomato-illustration" aria-hidden="true">
                 <Sprout :size="120" />
               </div>
 
@@ -167,11 +167,11 @@ const subtitleOptions = computed(() => {
   // 默认 AI 助农互动词
   return [
     '循迹小车自动巡检，成熟度实时感知',
-    'AI 精准识别每一颗草莓，让采摘不再靠经验',
+    'AI 精准识别每一颗番茄，让采摘不再靠经验',
     '从扫描到派单，全链路智能决策',
     '数据驱动种植，让每一垄都尽在掌握',
     '病害预警、补光建议、营养调控，守护每一颗果实',
-    '机器视觉 + 知识图谱，打造智慧草莓大棚'
+    '机器视觉 + 知识图谱，打造智慧番茄大棚'
   ]
 })
 
@@ -552,7 +552,7 @@ onUnmounted(() => {
   pointer-events: none;
 }
 
-.strawberry-illustration {
+.tomato-illustration {
   position: absolute;
   top: -30px;
   right: -20px;

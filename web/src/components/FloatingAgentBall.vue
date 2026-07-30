@@ -36,7 +36,7 @@
       <!-- 消息区 -->
       <div class="drawer-body" ref="bodyEl" @click="handleMsgClick">
         <div v-if="msgs.length === 0 && !threadId" class="welcome">
-          <div class="welcome-icon">🍄</div><h3>温室总管</h3><p>草莓温室 AI 决策助手</p>
+          <div class="welcome-icon">🍄</div><h3>温室总管</h3><p>番茄温室 AI 决策助手</p>
         </div>
 
         <template v-for="(m, i) in msgs" :key="i">

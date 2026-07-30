@@ -210,8 +210,8 @@ const vReveal = {
       </div>
       <div class="yx-container yx-hero__inner">
         <span class="yx-badge">v0.7.0 · MIT 开源 · LangGraph 驱动</span>
-        <h1 class="yx-hero__title">草莓温室<span class="yx-accent">智能管控平台</span></h1>
-        <p class="yx-hero__subtitle">基于多智能体协作的草莓种植 AI 决策系统</p>
+        <h1 class="yx-hero__title">番茄温室<span class="yx-accent">智能管控平台</span></h1>
+        <p class="yx-hero__subtitle">基于多智能体协作的番茄种植 AI 决策系统</p>
         <p class="yx-hero__desc">
           接入温室内传感器与执行器，由 1 个温室总管 + 6 个专业子智能体协作，
           实现从环境监测、生长追踪、成熟度分析到采收调度的全链路智能化闭环管控。
@@ -225,7 +225,7 @@ const vReveal = {
           <img
             class="yx-hero__img"
             src="https://xerrors.oss-cn-shanghai.aliyuncs.com/github/image-20260608002434299.png"
-                        alt="草莓温室智能管控平台界面预览"
+                        alt="番茄温室智能管控平台界面预览"
             loading="lazy"
           />
         </div>

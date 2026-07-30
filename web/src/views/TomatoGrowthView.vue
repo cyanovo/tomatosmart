@@ -1,11 +1,11 @@
 <template>
-  <div class="strawberry-growth layout-container">
+  <div class="tomato-growth layout-container">
     <PageHeader title="生长档案" :show-border="true">
       <template #info>
         <PageAgentDropdown default-agent="growth-tracker" />
         <span class="stage-pill">
           <Leaf :size="14" />
-          红颜 · 膨果期
+          红番茄 · 膨果期
         </span>
       </template>
     </PageHeader>
@@ -13,13 +13,13 @@
     <main class="growth-content">
       <section class="growth-hero">
         <img
-          src="/images/Strawberry/strawberry-growth-stages.png"
-          alt="草莓生长阶段"
+          src="/images/Tomato/tomato-growth-stages.png"
+          alt="番茄生长阶段"
           class="growth-hero-image"
         />
         <div class="growth-hero-copy">
           <p>批次档案</p>
-          <h2>A 区 2026 春茬红颜草莓</h2>
+          <h2>A 区 2026 春茬红番茄</h2>
           <span>定植 48 天 · 膨果期 · 预计 6 天后进入集中采收</span>
         </div>
       </section>
@@ -96,7 +96,7 @@ const records = [
 </script>
 
 <style scoped lang="less">
-.strawberry-growth {
+.tomato-growth {
   min-height: 100%;
   background: var(--gray-25);
 }

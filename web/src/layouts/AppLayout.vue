@@ -6,6 +6,7 @@ import {
   Bot,
   ClipboardList,
   FileClock,
+  Fingerprint,
   LayoutDashboard,
   Leaf,
   LibraryBig,
@@ -99,15 +100,15 @@ const router = useRouter()
 
 const activeTaskCount = computed(() => activeCountRef.value || 0)
 const organizationName = computed(() => {
-  return infoStore.organization.name || infoStore.branding.name || '草莓精准智控'
+  return infoStore.organization.name || infoStore.branding.name || '番茄精准智控'
 })
 
 // 下面是导航菜单部分，添加智能体项
 const mainList = computed(() => {
   const items = [
     {
-      name: '草莓驾驶舱',
-      path: '/strawberry-dashboard',
+      name: '番茄驾驶舱',
+      path: '/tomato-dashboard',
       icon: LayoutDashboard,
       activeIcon: LayoutDashboard
     },
@@ -129,14 +130,14 @@ const mainList = computed(() => {
 
   items.push({
     name: '智能温室物联网',
-    path: '/strawberry-iot',
-    activePaths: ['/strawberry-iot', '/industrial-iot'],
+    path: '/tomato-iot',
+    activePaths: ['/tomato-iot', '/industrial-iot'],
     icon: Sprout,
     activeIcon: Sprout
   })
 
   items.push({
-    name: '草莓知识库',
+    name: '番茄知识库',
     path: '/extensions',
     activePaths: ['/extensions'],
     icon: LibraryBig,
@@ -145,23 +146,30 @@ const mainList = computed(() => {
 
   items.push({
     name: '生长档案',
-    path: '/strawberry-growth',
+    path: '/tomato-growth',
     icon: Leaf,
     activeIcon: Leaf
   })
 
   items.push({
     name: '成熟度管理中心',
-    path: '/strawberry-maturity',
+    path: '/tomato-maturity',
     icon: ScanLine,
     activeIcon: ScanLine
   })
 
   items.push({
     name: 'AI 日志',
-    path: '/strawberry-ai-logs',
+    path: '/tomato-ai-logs',
     icon: FileClock,
     activeIcon: FileClock
+  })
+
+  items.push({
+    name: '产品溯源',
+    path: '/traceability',
+    icon: Fingerprint,
+    activeIcon: Fingerprint
   })
 
   items.push({

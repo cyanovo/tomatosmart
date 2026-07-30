@@ -2,12 +2,12 @@
   <div class="harvest-dashboard">
     <div class="topbar">
       <div class="topbar-left">
-        <button class="back-btn" type="button" @click="router.push('/strawberry-maturity')">
+        <button class="back-btn" type="button" @click="router.push('/tomato-maturity')">
           <ArrowLeft :size="16" />
           返回
         </button>
         <span class="logo-icon">🍄</span>
-        <span class="topbar-title">草莓成熟度检测与自动采摘</span>
+        <span class="topbar-title">番茄成熟度检测与自动采摘</span>
         <span class="topbar-sub">实时识别成熟度，联动采摘设备执行作业</span>
       </div>
       <div class="topbar-right">
@@ -52,7 +52,7 @@
           <div class="video-wrap">
             <img
               src="/image.png"
-              alt="草莓成熟度检测与自动采摘"
+              alt="番茄成熟度检测与自动采摘"
               class="video-img"
             />
           </div>
@@ -227,7 +227,7 @@ import {
   Activity, AlertTriangle, ArrowLeft, BarChart3, CircleCheck, ClipboardList, Clock, MapPin,
   Monitor, Play, ScrollText, Wrench
 } from 'lucide-vue-next'
-import { zoneConfig, scanRecords, harvestRecords as sharedRecords, getHarvestThreshold, setHarvestThreshold } from '@/data/strawberryData.js'
+import { zoneConfig, scanRecords, harvestRecords as sharedRecords, getHarvestThreshold, setHarvestThreshold } from '@/data/tomatoData.js'
 
 const route = useRoute()
 const router = useRouter()

@@ -1,8 +1,8 @@
-# Strawberry Greenhouse Smart Control Platform
+# Tomato Greenhouse Smart Control Platform
 
 ## What It Is
 
-An AI-powered smart control platform purpose-built for strawberry greenhouse cultivation. It connects to air sensors, soil sensors, and actuators inside the greenhouse, allowing AI agents to analyze real-time environmental data, make autonomous control decisions, and directly operate hardware. The platform covers the complete cultivation workflow — from environmental monitoring and growth tracking to maturity analysis and harvest dispatch — helping greenhouse managers achieve precise, automated strawberry production.
+An AI-powered smart control platform purpose-built for tomato greenhouse cultivation. It connects to air sensors, soil sensors, and actuators inside the greenhouse, allowing AI agents to analyze real-time environmental data, make autonomous control decisions, and directly operate hardware. The platform covers the complete cultivation workflow — from environmental monitoring and growth tracking to maturity analysis and harvest dispatch — helping greenhouse managers achieve precise, automated tomato production.
 
 ## What It Can Do
 
@@ -16,13 +16,13 @@ Greenhouse actuators — fans, wet curtains, ventilation windows, circulation pu
 From flower bud differentiation, flowering, fruit expansion, and color turning to harvest, each stage has a dedicated AI sub-agent providing care recommendations. The system records growth stages, environmental changes, and farming operations for each zone, building complete growth archives.
 
 ### Maturity Scanning and Harvest Dispatch
-Integrates with track-guided scanning carts that automatically scan strawberry maturity across zones, counting identified fruits and maturity percentages. Managers can customize the harvest threshold; when a zone reaches it, the system automatically prompts harvest cart dispatch and generates zone-specific harvest plans.
+Integrates with track-guided scanning carts that automatically scan tomato maturity across zones, counting identified fruits and maturity percentages. Managers can customize the harvest threshold; when a zone reaches it, the system automatically prompts harvest cart dispatch and generates zone-specific harvest plans.
 
 ### Global AI Assistant
-A floating strawberry ball sits in the bottom-right corner — click it and a chat panel slides out from the side. Ask anything anytime: "Why is Zone B temperature high?", "Which zones need harvesting today?", "What's the growth trend this week?" The AI responds based on real-time sensor data, knowledge base documents, and historical records. During responses, you can see which tools were called, which knowledge documents were consulted, and click on citations to view the original text excerpts.
+A floating tomato ball sits in the bottom-right corner — click it and a chat panel slides out from the side. Ask anything anytime: "Why is Zone B temperature high?", "Which zones need harvesting today?", "What's the growth trend this week?" The AI responds based on real-time sensor data, knowledge base documents, and historical records. During responses, you can see which tools were called, which knowledge documents were consulted, and click on citations to view the original text excerpts.
 
 ### Knowledge Base RAG Retrieval
-Upload strawberry cultivation guides, pest control manuals, fertilization references, and other documents to build a knowledge base. The AI automatically searches relevant knowledge when answering questions, with every response citing its sources so you can trace the basis of every recommendation.
+Upload tomato cultivation guides, pest control manuals, fertilization references, and other documents to build a knowledge base. The AI automatically searches relevant knowledge when answering questions, with every response citing its sources so you can trace the basis of every recommendation.
 
 ## Agent Fleet
 
@@ -42,7 +42,7 @@ Each page has a dropdown to switch which sub-agent governs that page. In the flo
 
 ## Pages
 
-- **Strawberry Dashboard** — Greenhouse overview, environmental metric cards, daily AI recommendations
+- **Tomato Dashboard** — Greenhouse overview, environmental metric cards, daily AI recommendations
 - **Smart Greenhouse IoT** — Real-time sensor data, manual/AI actuator control panel
 - **Growth Archives** — Zone growth stage records, AI care recommendations
 - **Maturity Center** — Cart scan records, maturity statistics, harvest recommendations

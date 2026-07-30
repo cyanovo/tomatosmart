@@ -14,6 +14,8 @@ from yuxi.utils import logger
 from yuxi.agents.backends.sandbox import init_sandbox_provider, shutdown_sandbox_provider
 from yuxi.iot.mqtt_client import mqtt_client
 from yuxi.services.iot_service import iot_service
+from yuxi.services.detect_service import detect_service
+from yuxi.repositories.detect_repository import detect_repository
 from yuxi import get_version
 
 
@@ -105,6 +107,13 @@ async def lifespan(app: FastAPI):
             logger.error(f"Failed to start MQTT client: {e}")
     else:
         logger.info("MQTT IoT client is disabled (set MQTT_ENABLED=true to enable)")
+
+    # 初始化番茄成熟度检测服务
+    try:
+        await detect_repository.init_table()
+        await detect_service.initialize()
+    except Exception as e:
+        logger.error(f"Failed to initialize detect service: {e}")
 
     # =========================================================
     # 2. 核心修复：在这里执行一次 setup()，建完表就拉倒

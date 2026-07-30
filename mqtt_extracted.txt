@@ -1,0 +1,65 @@
+1. 订阅主题（Subscribe Topics）
+get_strawberry_irrigation = "strawberry_irrigation"  # 草莓灌溉控制
+get_strawberry_fan = "strawberry_fan"               # 草莓灯光控制
+2. 发布主题（Publish Topics）
+air_topic = "/air/post"      # 空气传感器数据发布
+soil_topic = "/soil/post"    # 土壤传感器数据发布
+3. 接收服务器的判断逻辑
+灌溉控制逻辑（strawberry_irrigation）
+json
+{    
+"action":"start",      // 开启
+}
+
+"action":"stop",      // 关闭
+
+灯光控制逻辑（strawberry_fan）
+
+json
+{    
+"led1":"on",      // 开启
+"led2":"on",      // 开启
+"led3":"on",      // 开启
+"led4":"on",      // 开启
+"led5":"on",      // 开启
+}
+"led1":"off",      // 关闭
+一般为单独发送，控制哪个设备单独发哪个设备。例如：控制led3打开
+json
+{    
+"led3":"on",      // 开启
+}
+
+第一排： led1
+第二排:  led3
+第三排： led4
+第四排： led5
+第五排： led2
+
+5. 发布的传感器数据格式
+空气传感器数据（/air/post）：
+json
+{    
+"humidity": 45.5,      // 空气湿度（%）    
+"temp": 25.3,          // 空气温度（℃）    
+"co2": 450,            // CO2浓度（ppm）   
+ "Illumination": 12000  // 光照强度（lux）
+}
+土壤传感器数据（/soil/post）：
+json
+{   
+ "soil_moisture": 65.5,        // 土壤湿度（%）   
+ "soil_temperature": 23.8,     // 土壤温度（℃）  
+  "soil_conductivity": 1200,    // 土壤电导率（μS/cm）  
+  "ph_value": 6.8,              // pH值   
+ "nitrogen": 120,              // 氮含量 
+   "phosphorus": 80,             // 磷含量   
+ "potassium": 200              // 钾含量
+}
+6. MQTT连接配置
+# MQTT服务器配置
+server_url = "mqtt://broker.emqx.io"  
+port = 1883user = "admin"
+password = "admin123"
+client_id = "haas506-client-{timestamp}"  # 动态生成
+keepalive = 60  # 心跳间隔60秒

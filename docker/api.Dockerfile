@@ -32,6 +32,7 @@ RUN set -ex \
         libpq5 \
         libsm6 \
         libxext6 \
+        libzbar0 \
     # (C) 清理垃圾，减小体积
     && apt-get clean \
     && rm -rf /var/lib/apt/lists/*

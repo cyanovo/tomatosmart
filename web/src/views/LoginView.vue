@@ -298,7 +298,7 @@ const brandOrgName = computed(() => {
 })
 const brandName = computed(() => {
   const orgName = brandOrgName.value
-  const brandNameRaw = infoStore.branding?.name?.trim() || '草莓精准智控'
+  const brandNameRaw = infoStore.branding?.name?.trim() || '番茄精准智控'
 
   if (orgName && brandNameRaw && orgName !== brandNameRaw) {
     return brandNameRaw
@@ -447,7 +447,7 @@ const handleLogin = async () => {
 
     // 根据用户角色决定重定向目标
     if (redirectPath === '/') {
-      router.push('/strawberry-dashboard')
+      router.push('/tomato-dashboard')
     } else {
       // 跳转到其他预设的路径
       router.push(redirectPath)

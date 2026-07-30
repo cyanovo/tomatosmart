@@ -52,14 +52,14 @@ const router = createRouter({
       ]
     },
     {
-      path: '/strawberry-dashboard',
-      name: 'strawberry-dashboard',
+      path: '/tomato-dashboard',
+      name: 'tomato-dashboard',
       component: AppLayout,
       children: [
         {
           path: '',
-          name: 'StrawberryDashboardComp',
-          component: () => import('../views/StrawberryDashboardView.vue'),
+          name: 'TomatoDashboardComp',
+          component: () => import('../views/TomatoDashboardView.vue'),
           meta: { keepAlive: true, requiresAuth: true }
         }
       ]
@@ -80,11 +80,11 @@ const router = createRouter({
     {
       path: '/industrial-iot',
       name: 'industrial-iot',
-      redirect: '/strawberry-iot'
+      redirect: '/tomato-iot'
     },
     {
-      path: '/strawberry-iot',
-      name: 'strawberry-iot',
+      path: '/tomato-iot',
+      name: 'tomato-iot',
       component: AppLayout,
       children: [
         {
@@ -96,54 +96,67 @@ const router = createRouter({
       ]
     },
     {
-      path: '/strawberry-growth',
-      name: 'strawberry-growth',
+      path: '/tomato-growth',
+      name: 'tomato-growth',
       component: AppLayout,
       children: [
         {
           path: '',
-          name: 'StrawberryGrowthComp',
-          component: () => import('../views/StrawberryGrowthView.vue'),
+          name: 'TomatoGrowthComp',
+          component: () => import('../views/TomatoGrowthView.vue'),
           meta: { keepAlive: true, requiresAuth: true }
         }
       ]
     },
     {
-      path: '/strawberry-maturity',
-      name: 'strawberry-maturity',
+      path: '/tomato-maturity',
+      name: 'tomato-maturity',
       component: AppLayout,
       children: [
         {
           path: '',
-          name: 'StrawberryMaturityComp',
-          component: () => import('../views/StrawberryMaturityCenterView.vue'),
+          name: 'TomatoMaturityComp',
+          component: () => import('../views/TomatoMaturityCenterView.vue'),
           meta: { keepAlive: true, requiresAuth: true }
         }
       ]
     },
     {
-      path: '/strawberry-harvest-dispatch',
-      name: 'strawberry-harvest-dispatch',
+      path: '/tomato-harvest-dispatch',
+      name: 'tomato-harvest-dispatch',
       component: AppLayout,
       children: [
         {
           path: '',
-          name: 'StrawberryHarvestDispatchComp',
-          component: () => import('../views/StrawberryHarvestDispatchView.vue'),
+          name: 'TomatoHarvestDispatchComp',
+          component: () => import('../views/TomatoHarvestDispatchView.vue'),
           meta: { keepAlive: true, requiresAuth: true }
         }
       ]
     },
     {
-      path: '/strawberry-ai-logs',
-      name: 'strawberry-ai-logs',
+      path: '/tomato-ai-logs',
+      name: 'tomato-ai-logs',
       component: AppLayout,
       children: [
         {
           path: '',
-          name: 'StrawberryAiLogsComp',
-          component: () => import('../views/StrawberryAiLogView.vue'),
+          name: 'TomatoAiLogsComp',
+          component: () => import('../views/TomatoAiLogView.vue'),
           meta: { keepAlive: true, requiresAuth: true }
+        }
+      ]
+    },
+    {
+      path: '/traceability',
+      name: 'traceability',
+      component: AppLayout,
+      children: [
+        {
+          path: '',
+          name: 'TraceabilityComp',
+          component: () => import('../views/TraceabilityView.vue'),
+          meta: { keepAlive: false, requiresAuth: true }
         }
       ]
     },

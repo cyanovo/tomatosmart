@@ -63,11 +63,19 @@ services:
     # region api_envs
     environment:
       <<: *api-worker-env
-      MQTT_ENABLED: ${MQTT_ENABLED:-false}
-      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-broker.emqx.io}
+      MQTT_ENABLED: ${MQTT_ENABLED:-true}
+      MQTT_BROKER_URL: ${MQTT_BROKER_URL:-mosquitto}
       MQTT_BROKER_PORT: ${MQTT_BROKER_PORT:-1883}
-      MQTT_BROKER_USERNAME: ${MQTT_BROKER_USERNAME:-admin}
-      MQTT_BROKER_PASSWORD: ${MQTT_BROKER_PASSWORD:-admin123}
+      MQTT_BROKER_USERNAME: ${MQTT_BROKER_USERNAME:-}
+      MQTT_BROKER_PASSWORD: ${MQTT_BROKER_PASSWORD:-}
+      # 摄像头配置
+      CAMERA_ENABLED: ${CAMERA_ENABLED:-true}
+      CAMERA_ID: ${CAMERA_ID:-0}
+      CAMERA_WIDTH: ${CAMERA_WIDTH:-1280}
+      CAMERA_HEIGHT: ${CAMERA_HEIGHT:-720}
+      # 检测模型配置
+      DETECT_MODEL_PATH: ${DETECT_MODEL_PATH:-/app/package/yuxi/detect/models/best.pt}
+      DETECT_CONFIDENCE_THRESHOLD: ${DETECT_CONFIDENCE_THRESHOLD:-0.5}
     # endregion api_envs
     command: uv run --no-sync --no-dev uvicorn server.main:app --host 0.0.0.0 --port 5050 --reload --reload-dir /app/server --reload-dir /app/package
     restart: unless-stopped
@@ -85,6 +93,8 @@ services:
       minio:
         condition: service_healthy
       sandbox-provisioner:
+        condition: service_healthy
+      mosquitto:
         condition: service_healthy
 
   worker:
@@ -324,6 +334,28 @@ services:
     networks:
       - app-network
     restart: unless-stopped
+
+  # region mqtt
+  mosquitto:
+    image: eclipse-mosquitto:2
+    container_name: mosquitto
+    ports:
+      - "1883:1883"
+      - "9002:9001"
+    volumes:
+      - ./docker/volumes/mosquitto/config:/mosquitto/config
+      - ./docker/volumes/mosquitto/data:/mosquitto/data
+      - ./docker/volumes/mosquitto/log:/mosquitto/log
+    networks:
+      - app-network
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD-SHELL", "mosquitto_sub -t '$$SYS/#' -C 1 -W 3 || exit 1"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+  # endregion mqtt
 
   redis:
     image: redis:7-alpine

@@ -41,13 +41,13 @@ class SoilSensorData(BaseModel):
 
 
 class IrrigationCommand(BaseModel):
-    """灌溉控制指令（发布到 strawberry_irrigation）"""
+    """灌溉控制指令（发布到 tomato_irrigation）"""
 
     action: Literal["start", "stop"]
 
 
 class LedCommand(BaseModel):
-    """LED 补光灯控制指令（发布到 strawberry_fan）"""
+    """LED 补光灯控制指令（发布到 tomato_fan）"""
 
     led1: Literal["on", "off"] | None = None
     led2: Literal["on", "off"] | None = None

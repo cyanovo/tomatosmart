@@ -18,6 +18,8 @@ from server.routers.filesystem_router import filesystem_router
 from server.routers.workspace_router import workspace
 from server.routers.mention_router import mention_router
 from server.routers.iot_router import iot
+from server.routers.detect_router import detect
+from server.routers.trace_router import trace
 
 _LITE_MODE = os.environ.get("LITE_MODE", "").lower() in ("true", "1")
 
@@ -43,6 +45,8 @@ router.include_router(filesystem_router)  # /api/viewer/filesystem/* 工作台�
 router.include_router(workspace)  # /api/workspace/* 用户个人工作区
 router.include_router(mention_router)  # /api/mention/* 提及文件搜索接口
 router.include_router(iot)  # /api/iot/* 智能温室物联网
+router.include_router(detect)  # /api/detect/* 番茄成熟度检测
+router.include_router(trace)  # /api/trace/* 番茄溯源
 
 if not _LITE_MODE:
     from server.routers.graph_router import graph

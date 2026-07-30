@@ -155,9 +155,9 @@ class MqttClient:
         return True
 
     def _publish_fan(self, payload: dict) -> bool:
-        """统一通过 strawberry_fan 发布"""
+        """统一通过 tomato_fan 发布"""
         if not self._client or not self._client.is_connected():
-            logger.warning("MQTT not connected, cannot publish to strawberry_fan")
+            logger.warning("MQTT not connected, cannot publish to tomato_fan")
             return False
         data = json.dumps(payload)
         self._client.publish(TOPIC_FAN, data)

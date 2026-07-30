@@ -1,5 +1,5 @@
 /**
- * 草莓大棚共享数据 —— 成熟度管理中心、采摘小车派发 共用
+ * 番茄大棚共享数据 —— 成熟度管理中心、采摘小车派发 共用
  * 后续可替换为后端 API 调用
  */
 
@@ -44,7 +44,7 @@ export const harvestRecords = [
 ]
 
 /** 采摘阈值（可配置，持久化到 localStorage） */
-const THRESHOLD_KEY = 'strawberry-harvest-threshold'
+const THRESHOLD_KEY = 'tomato-harvest-threshold'
 const DEFAULT_THRESHOLD = 80
 
 export function getHarvestThreshold() {

@@ -11,8 +11,8 @@ BROKER_USERNAME = os.environ.get("MQTT_BROKER_USERNAME", "admin")
 BROKER_PASSWORD = os.environ.get("MQTT_BROKER_PASSWORD", "admin123")
 
 TOPICS = [
-    ("strawberry_irrigation", 1),
-    ("strawberry_fan", 1),
+    ("tomato_irrigation", 1),
+    ("tomato_fan", 1),
 ]
 
 
@@ -20,7 +20,7 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
     if reason_code == 0:
         client.subscribe(TOPICS)
         print(f"✅ 已连接 {BROKER_URL}:{BROKER_PORT}")
-        print("   监听: strawberry_irrigation | strawberry_fan")
+        print("   监听: tomato_irrigation | tomato_fan")
         print("   等待前端按钮指令...\n")
     else:
         print(f"❌ 连接失败: {reason_code}")

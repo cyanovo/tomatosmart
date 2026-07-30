@@ -5,8 +5,8 @@ import markdownItTaskCheckbox from 'markdown-it-task-checkbox'
 // https://vitepress.dev/reference/site-config
 export default defineConfig({
   lang: 'zh-CN',
-  title: "草莓温室智能管控平台",
-  description: "草莓温室智能管控平台",
+  title: "番茄温室智能管控平台",
+  description: "番茄温室智能管控平台",
   base: '/test1/',
   ignoreDeadLinks: [
     /localhost/,
@@ -80,7 +80,7 @@ export default defineConfig({
 
     footer: {
       message: '本项目基于 MIT License 开源，欢迎使用和贡献。',
-      copyright: 'Copyright © 2025-present Strawberry Greenhouse'
+      copyright: 'Copyright © 2025-present Tomato Greenhouse'
     },
 
     editLink: {

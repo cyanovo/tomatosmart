@@ -1,4 +1,4 @@
-# Contributing to 草莓温室智能管控平台
+# Contributing to 番茄温室智能管控平台
 
 感谢你关注本项目。欢迎提交 Issue、改进文档、修复 Bug 或贡献新功能。
 

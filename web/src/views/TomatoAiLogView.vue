@@ -13,7 +13,7 @@
       <div class="report-layout">
         <div class="report-main">
           <section class="log-overview">
-            <img src="/images/Strawberry/strawberry-ai-advisor.png" alt="AI 草莓专家" />
+            <img src="/images/Tomato/tomato-ai-advisor.png" alt="AI 番茄专家" />
             <div>
               <p>智能决策留痕</p>
               <h2>记录识别、预警、调控与采摘建议全过程</h2>

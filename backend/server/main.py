@@ -136,6 +136,37 @@ app.add_middleware(AccessLogMiddleware)
 app.add_middleware(LoginRateLimitMiddleware)
 app.add_middleware(AuthMiddleware)
 
+
+# 全局异常处理器 - 确保所有错误都返回 JSON 格式
+@app.exception_handler(Exception)
+async def global_exception_handler(request: Request, exc: Exception):
+    """捕获所有未处理的异常，返回 JSON 格式的错误信息"""
+    import traceback
+    from yuxi.utils import logger
+
+    # 记录详细错误日志
+    logger.error(f"Unhandled exception: {exc}")
+    logger.error(traceback.format_exc())
+
+    return JSONResponse(
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={
+            "detail": "服务器内部错误，请稍后重试",
+            "error_type": type(exc).__name__,
+        },
+    )
+
+
+@app.exception_handler(500)
+async def internal_server_error_handler(request: Request, exc):
+    """处理 500 错误，确保返回 JSON 格式"""
+    return JSONResponse(
+        status_code=500,
+        content={
+            "detail": "服务器内部错误，请稍后重试",
+        },
+    )
+
 if __name__ == "__main__":
     # uvicorn.run(app, host="0.0.0.0", port=5050, threads=10, workers=10, reload=True)
 

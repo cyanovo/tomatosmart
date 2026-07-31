@@ -300,7 +300,7 @@
               <h3>新增种子</h3>
               <div class="form-group">
                 <label>品种名称</label>
-                <input v-model="seedForm.variety" placeholder="如：红番茄" />
+                <input v-model="seedForm.variety" placeholder="如：番茄" />
               </div>
               <div class="form-group">
                 <label>供应商</label>

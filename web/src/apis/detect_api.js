@@ -7,6 +7,18 @@
  */
 
 /**
+ * 安全解析 JSON 响应
+ */
+async function safeParseResponse(response) {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { detail: text || `HTTP ${response.status}: ${response.statusText}` }
+  }
+}
+
+/**
  * 获取认证头
  */
 function getAuthHeaders() {
@@ -30,8 +42,11 @@ export async function captureAndDetect(params = {}) {
     headers: getAuthHeaders(),
     body: JSON.stringify(params),
   })
-  if (!res.ok) throw new Error(`检测失败: ${res.status}`)
-  return res.json()
+  if (!res.ok) {
+    const error = await safeParseResponse(res)
+    throw new Error(error.detail || `检测失败: ${res.status}`)
+  }
+  return safeParseResponse(res)
 }
 
 /**
@@ -55,8 +70,11 @@ export async function detectFromImage(file, zone = 'A', conf_threshold) {
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   })
-  if (!res.ok) throw new Error(`检测失败: ${res.status}`)
-  return res.json()
+  if (!res.ok) {
+    const error = await safeParseResponse(res)
+    throw new Error(error.detail || `检测失败: ${res.status}`)
+  }
+  return safeParseResponse(res)
 }
 
 /**
@@ -73,8 +91,11 @@ export async function getDetectHistory(params = {}) {
   const res = await fetch(`/api/detect/history?${query.toString()}`, {
     headers: getAuthHeaders(),
   })
-  if (!res.ok) throw new Error(`查询失败: ${res.status}`)
-  return res.json()
+  if (!res.ok) {
+    const error = await safeParseResponse(res)
+    throw new Error(error.detail || `查询失败: ${res.status}`)
+  }
+  return safeParseResponse(res)
 }
 
 /**
@@ -84,8 +105,11 @@ export async function getDetectStats() {
   const res = await fetch('/api/detect/stats', {
     headers: getAuthHeaders(),
   })
-  if (!res.ok) throw new Error(`查询失败: ${res.status}`)
-  return res.json()
+  if (!res.ok) {
+    const error = await safeParseResponse(res)
+    throw new Error(error.detail || `查询失败: ${res.status}`)
+  }
+  return safeParseResponse(res)
 }
 
 /**
@@ -95,8 +119,11 @@ export async function getCameraStatus() {
   const res = await fetch('/detect-api/health', {
     headers: getAuthHeaders(),
   })
-  if (!res.ok) throw new Error(`查询失败: ${res.status}`)
-  return res.json()
+  if (!res.ok) {
+    const error = await safeParseResponse(res)
+    throw new Error(error.detail || `查询失败: ${res.status}`)
+  }
+  return safeParseResponse(res)
 }
 
 /**

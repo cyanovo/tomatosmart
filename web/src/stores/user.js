@@ -2,6 +2,17 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import { useAgentStore } from './agent'
 
+// 安全解析 JSON 响应
+async function safeParseResponse(response) {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    // 如果不是 JSON，返回包含错误信息的对象
+    return { detail: text || `HTTP ${response.status}: ${response.statusText}` }
+  }
+}
+
 export const useUserStore = defineStore('user', () => {
   // 状态
   const token = ref(localStorage.getItem('user_token') || '')
@@ -33,7 +44,7 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
 
         // 如果是423锁定状态码，抛出包含状态码的错误
         if (response.status === 423) {
@@ -46,7 +57,7 @@ export const useUserStore = defineStore('user', () => {
         throw new Error(error.detail || '登录失败')
       }
 
-      const data = await response.json()
+      const data = await safeParseResponse(response)
 
       // 更新状态
       token.value = data.access_token
@@ -100,11 +111,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
         throw new Error(error.detail || '初始化管理员失败')
       }
 
-      const data = await response.json()
+      const data = await safeParseResponse(response)
 
       // 更新状态
       token.value = data.access_token
@@ -130,7 +141,7 @@ export const useUserStore = defineStore('user', () => {
   async function checkFirstRun() {
     try {
       const response = await fetch('/api/auth/check-first-run')
-      const data = await response.json()
+      const data = await safeParseResponse(response)
       return data.first_run
     } catch (error) {
       console.error('检查首次运行状态错误:', error)
@@ -155,10 +166,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        throw new Error('获取用户列表失败')
+        const error = await safeParseResponse(response)
+        throw new Error(error.detail || '获取用户列表失败')
       }
 
-      return await response.json()
+      return await safeParseResponse(response)
     } catch (error) {
       console.error('获取用户列表错误:', error)
       throw error
@@ -177,11 +189,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
         throw new Error(error.detail || '创建用户失败')
       }
 
-      return await response.json()
+      return await safeParseResponse(response)
     } catch (error) {
       console.error('创建用户错误:', error)
       throw error
@@ -200,11 +212,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
         throw new Error(error.detail || '更新用户失败')
       }
 
-      return await response.json()
+      return await safeParseResponse(response)
     } catch (error) {
       console.error('更新用户错误:', error)
       throw error
@@ -221,11 +233,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
         throw new Error(error.detail || '删除用户失败')
       }
 
-      return await response.json()
+      return await safeParseResponse(response)
     } catch (error) {
       console.error('删除用户错误:', error)
       throw error
@@ -245,11 +257,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
         throw new Error(error.detail || '用户名验证失败')
       }
 
-      return await response.json()
+      return await safeParseResponse(response)
     } catch (error) {
       console.error('用户名验证错误:', error)
       throw error
@@ -271,11 +283,11 @@ export const useUserStore = defineStore('user', () => {
       })
 
       if (!response.ok) {
-        const error = await response.json()
+        const error = await safeParseResponse(response)
         throw new Error(error.detail || '头像上传失败')
       }
 
-      const data = await response.json()
+      const data = await safeParseResponse(response)
 
       // 更新本地头像状态
       avatar.value = data.avatar_url

@@ -6,7 +6,7 @@
           <ArrowLeft :size="16" />
           返回
         </button>
-        <span class="logo-icon">🍄</span>
+        <img class="logo-icon" src="/favicon.svg" alt="logo" />
         <span class="topbar-title">番茄成熟度检测与自动采摘</span>
         <span class="topbar-sub">实时识别成熟度，联动采摘设备执行作业</span>
       </div>
@@ -59,7 +59,7 @@
           <!-- 统计条 -->
           <div class="stats-row">
             <div class="stat-item">
-              <span class="stat-emoji">🍄</span>
+              <img class="stat-emoji" src="/favicon.svg" alt="统计" />
               <div><div class="stat-label">当前检测总数</div><div class="stat-value total">{{ scanStats.total }}</div></div>
             </div>
             <div class="stat-sep"></div>
@@ -489,7 +489,7 @@ onUnmounted(() => {
   &:hover { border-color: var(--main-color); color: var(--main-color); }
 }
 
-.logo-icon { font-size: 20px; flex-shrink: 0; }
+.logo-icon { width: 24px; height: 24px; flex-shrink: 0; }
 
 .topbar-title {
   font-size: 15px;
@@ -681,7 +681,7 @@ onUnmounted(() => {
   gap: 7px;
 }
 
-.stat-emoji { font-size: 18px; }
+.stat-emoji { width: 20px; height: 20px; }
 
 .stat-dot-sm {
   width: 10px; height: 10px; border-radius: 50%; flex-shrink: 0;

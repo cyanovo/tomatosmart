@@ -5,7 +5,7 @@
         <PageAgentDropdown default-agent="growth-tracker" />
         <span class="stage-pill">
           <Leaf :size="14" />
-          红番茄 · 膨果期
+          番茄 · 膨果期
         </span>
       </template>
     </PageHeader>
@@ -19,7 +19,7 @@
         />
         <div class="growth-hero-copy">
           <p>批次档案</p>
-          <h2>A 区 2026 春茬红番茄</h2>
+          <h2>A 区 2026 春茬番茄</h2>
           <span>定植 48 天 · 膨果期 · 预计 6 天后进入集中采收</span>
         </div>
       </section>

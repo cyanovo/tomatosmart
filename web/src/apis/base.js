@@ -53,9 +53,18 @@ export async function apiRequest(url, options = {}, requiresAuth = true, respons
       })
 
       try {
-        errorData = await response.json()
-        errorMessage = errorData.detail || errorData.message || errorMessage
-        console.log('API错误详情:', errorData)
+        // 先获取响应文本，再尝试解析为 JSON
+        const responseText = await response.text()
+        try {
+          errorData = JSON.parse(responseText)
+          errorMessage = errorData.detail || errorData.message || errorMessage
+        } catch {
+          // 如果不是 JSON，使用响应文本作为错误信息
+          if (responseText) {
+            errorMessage = responseText
+          }
+        }
+        console.log('API错误详情:', errorData || responseText)
 
         // 如果是422错误，打印更详细的信息
         if (response.status === 422) {
@@ -64,12 +73,12 @@ export async function apiRequest(url, options = {}, requiresAuth = true, respons
             requestMethod: requestOptions.method,
             requestHeaders: requestOptions.headers,
             requestBody: requestOptions.body,
-            responseData: errorData
+            responseData: errorData || responseText
           })
         }
       } catch (e) {
-        // 如果无法解析JSON，使用默认错误信息
-        console.log('无法解析错误响应JSON:', e)
+        // 如果无法读取响应，使用默认错误信息
+        console.log('无法读取错误响应:', e)
       }
 
       // 特殊处理401和403错误

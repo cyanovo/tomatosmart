@@ -2,7 +2,7 @@
   <Teleport to="body">
     <div class="floating-ball" :class="{ 'is-open': isOpen, 'is-dragging': isDragging }" :style="ballStyle"
       @mousedown.prevent="onPointerStart($event)" @touchstart.prevent="onPointerStart($event)" @click.stop="handleBallClick">
-      <div class="ball-inner"><span class="ball-icon">🍄</span><span class="ball-pulse"></span></div>
+      <div class="ball-inner"><img class="ball-icon" src="/favicon.svg" alt="温室总管" /><span class="ball-pulse"></span></div>
     </div>
 
     <div class="drawer-overlay" :class="{ show: isOpen }" @click="close"></div>
@@ -11,7 +11,7 @@
       <!-- 头部 -->
       <div class="drawer-header">
         <div class="drawer-title" @click="agentMenuOpen = !agentMenuOpen">
-          <span class="drawer-avatar">🍄</span>
+          <img class="drawer-avatar" src="/favicon.svg" alt="温室总管" />
           <div><strong>{{ currentAgentLabel }}</strong><small>{{ threadId ? '对话中' : '新对话' }}</small></div>
           <ChevronDown :size="14" class="agent-chevron" :class="{ open: agentMenuOpen }" />
         </div>
@@ -36,7 +36,7 @@
       <!-- 消息区 -->
       <div class="drawer-body" ref="bodyEl" @click="handleMsgClick">
         <div v-if="msgs.length === 0 && !threadId" class="welcome">
-          <div class="welcome-icon">🍄</div><h3>温室总管</h3><p>番茄温室 AI 决策助手</p>
+          <img class="welcome-icon" src="/favicon.svg" alt="温室总管" /><h3>温室总管</h3><p>番茄温室 AI 决策助手</p>
         </div>
 
         <template v-for="(m, i) in msgs" :key="i">
@@ -512,7 +512,7 @@ function openAgentManage() { agentMenuOpen.value = false; close(); router.push({
 <style scoped lang="less">
 .floating-ball { position: fixed; z-index: 9998; width: 52px; height: 52px; border-radius: 50%; background: var(--gray-0); border: 2px solid var(--main-color); box-shadow: 0 4px 16px rgba(0,0,0,.12), 0 0 0 4px color-mix(in srgb, var(--main-color) 15%, transparent); cursor: pointer; user-select: none; transition: transform .2s, box-shadow .2s; &:hover { transform: scale(1.08); box-shadow: 0 6px 24px rgba(0,0,0,.16), 0 0 0 8px color-mix(in srgb, var(--main-color) 20%, transparent); } &:active { transform: scale(.95); } &.is-open { opacity: 0; pointer-events: none; } &.is-dragging { transition: none; transform: scale(1.1); box-shadow: 0 8px 32px rgba(0,0,0,.2), 0 0 0 10px color-mix(in srgb, var(--main-color) 25%, transparent); } }
 .ball-inner { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; position: relative; }
-.ball-icon { font-size: 26px; }
+.ball-icon { width: 30px; height: 30px; }
 .ball-pulse { position: absolute; inset: -6px; border-radius: 50%; border: 2px solid color-mix(in srgb, var(--main-color) 30%, transparent); animation: pulse-ring 2.5s ease-out infinite; }
 @keyframes pulse-ring { 0% { transform: scale(1); opacity: .7; } 100% { transform: scale(1.5); opacity: 0; } }
 
@@ -521,7 +521,7 @@ function openAgentManage() { agentMenuOpen.value = false; close(); router.push({
 
 .drawer-header { display: flex; align-items: center; justify-content: space-between; padding: 8px 12px; border-bottom: 1px solid var(--gray-100); flex-shrink: 0; }
 .drawer-title { display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 4px 6px; border-radius: 8px; &:hover { background: var(--gray-50); } strong { font-size: 13px; font-weight: 650; color: var(--gray-1000); max-width: 100px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } small { font-size: 10px; color: var(--gray-500); display: block; } }
-.drawer-avatar { font-size: 20px; width: 32px; height: 32px; display: flex; align-items: center; justify-content: center; background: var(--main-50); border-radius: 8px; flex-shrink: 0; }
+.drawer-avatar { width: 24px; height: 24px; padding: 4px; display: flex; align-items: center; justify-content: center; background: var(--main-50); border-radius: 8px; flex-shrink: 0; }
 .agent-chevron { color: var(--gray-400); flex-shrink: 0; transition: transform .2s; &.open { transform: rotate(180deg); } }
 .drawer-actions { display: flex; gap: 1px; }
 .dbtn { width: 28px; height: 28px; display: flex; align-items: center; justify-content: center; border: 1px solid transparent; border-radius: 6px; background: transparent; color: var(--gray-500); cursor: pointer; &:hover { background: var(--gray-50); color: var(--gray-800); } }
@@ -534,7 +534,7 @@ function openAgentManage() { agentMenuOpen.value = false; close(); router.push({
 .conv-del { opacity: 0; border: none; background: transparent; color: var(--gray-400); cursor: pointer; padding: 1px; border-radius: 3px; &:hover { color: var(--color-error-500); } .conv-item:hover & { opacity: 1; } }
 
 .drawer-body { flex: 1; overflow-y: auto; padding: 10px 12px; display: flex; flex-direction: column; gap: 8px; }
-.welcome { text-align: center; padding: 30px 10px; .welcome-icon { font-size: 40px; margin-bottom: 8px; } h3 { font-size: 16px; font-weight: 700; color: var(--gray-1000); margin: 0 0 4px; } p { font-size: 12px; color: var(--gray-500); } }
+.welcome { text-align: center; padding: 30px 10px; .welcome-icon { width: 64px; height: 64px; margin-bottom: 8px; } h3 { font-size: 16px; font-weight: 700; color: var(--gray-1000); margin: 0 0 4px; } p { font-size: 12px; color: var(--gray-500); } }
 
 .tool-row { display: flex; flex-wrap: wrap; gap: 4px; }
 .tool-tag { display: inline-flex; align-items: center; gap: 3px; padding: 2px 7px; border-radius: 10px; background: var(--main-10); color: var(--main-color); font-size: 10px; font-weight: 500; &.done { background: var(--color-success-50); color: var(--color-success-700); } }

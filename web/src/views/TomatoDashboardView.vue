@@ -20,7 +20,7 @@
         <div class="hero-overlay"></div>
         <div class="hero-copy">
           <p class="eyebrow">今日生产态势</p>
-          <h2>红番茄 A 区处于膨果期，环境状态稳定</h2>
+          <h2>番茄 A 区处于膨果期，环境状态稳定</h2>
           <p class="hero-desc">AI 已根据温室环境、水培营养液与农事任务生成今日调控建议。</p>
         </div>
         <div class="hero-metrics">

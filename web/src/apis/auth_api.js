@@ -4,11 +4,23 @@
 
 import { apiAdminGet } from './base'
 
+/**
+ * 安全解析 JSON 响应
+ */
+async function safeParseJson(response) {
+  const text = await response.text()
+  try {
+    return JSON.parse(text)
+  } catch {
+    return { detail: text || `HTTP ${response.status}` }
+  }
+}
+
 async function parseErrorDetail(response, fallbackMessage) {
   const contentType = response.headers.get('content-type') || ''
 
   if (contentType.includes('application/json')) {
-    const error = await response.json()
+    const error = await safeParseJson(response)
     return error?.detail || fallbackMessage
   }
 
@@ -25,7 +37,7 @@ async function getOIDCConfig() {
   if (!response.ok) {
     throw new Error('获取 OIDC 配置失败')
   }
-  return response.json()
+  return safeParseJson(response)
 }
 
 /**
@@ -40,7 +52,7 @@ async function getOIDCLoginUrl(redirectPath = '/') {
     const detail = await parseErrorDetail(response, '获取 OIDC 登录地址失败')
     throw new Error(detail)
   }
-  return response.json()
+  return safeParseJson(response)
 }
 
 /**
@@ -77,7 +89,7 @@ async function exchangeOIDCCode(code) {
     throw new Error(detail)
   }
 
-  return response.json()
+  return safeParseJson(response)
 }
 
 export const authApi = {

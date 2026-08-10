@@ -14,7 +14,7 @@
 - Git
 - 至少 8GB 内存，推荐 16GB
 
-Windows 用户建议使用 PowerShell 运行命令。
+Windows 用户建议使用 PowerShell 或 CMD 运行命令，并确保 Docker Desktop 已经启动。
 
 ### 2. 克隆项目
 
@@ -27,8 +27,14 @@ cd Newsmart-Strawberry
 
 Windows:
 
+```cmd
+.\scripts\init.bat
+```
+
+如果需要直接运行 PowerShell 脚本，可使用下面的命令避免执行策略拦截：
+
 ```powershell
-.\scripts\init.ps1
+powershell -NoProfile -ExecutionPolicy Bypass -File .\scripts\init.ps1
 ```
 
 Linux / macOS:
@@ -38,7 +44,7 @@ chmod +x scripts/init.sh
 ./scripts/init.sh
 ```
 
-课堂私有仓库已经内置 `.env` 配置。初始化脚本会自动补齐本机专用的 `JWT_SECRET_KEY` 和 `GREENHOUSE_INSTANCE_ID`，并通过国内镜像源预下载公开依赖镜像。
+课堂私有仓库已经内置 `.env` 配置。初始化脚本会自动补齐本机专用的 `JWT_SECRET_KEY` 和 `GREENHOUSE_INSTANCE_ID`，并优先通过国内镜像源预下载公开依赖镜像。
 
 ### 4. 构建并启动
 
@@ -69,7 +75,9 @@ docker compose ps
 
 ### 推荐方式：使用项目初始化脚本
 
-`scripts/init.ps1` 和 `scripts/init.sh` 会预拉取项目所需的基础镜像，并通过 `scripts/pull_image.*` 使用国内可访问的镜像前缀下载常见镜像。
+Windows 推荐运行 `scripts/init.bat`。它会以临时放行执行策略的方式调用 `scripts/init.ps1`，避免学生电脑因 PowerShell 权限策略无法执行脚本。
+
+`scripts/init.ps1` 和 `scripts/init.sh` 会预拉取项目所需的基础镜像，并通过 `scripts/pull_image.*` 优先使用国内可访问的镜像前缀下载常见镜像。
 
 初始化完成后继续运行：
 

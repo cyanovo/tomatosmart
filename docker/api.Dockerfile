@@ -41,19 +41,15 @@ RUN set -ex \
 COPY ../backend/pyproject.toml /app/pyproject.toml
 COPY ../backend/.python-version /app/.python-version
 COPY ../backend/uv.lock /app/uv.lock
-RUN sed -i 's|https://pypi.tuna.tsinghua.edu.cn/simple|https://pypi.org/simple|g' /app/pyproject.toml /app/uv.lock \
-    && sed -i 's|https://pypi.tuna.tsinghua.edu.cn/packages|https://files.pythonhosted.org/packages|g' /app/uv.lock
 
 # 先复制 package 目录，因为 pyproject.toml 中 greenhouse = { path = "package", editable = true }
 COPY ../backend/package /app/package
-RUN sed -i 's|https://pypi.tuna.tsinghua.edu.cn/simple|https://pypi.org/simple|g' /app/package/pyproject.toml
 
-# 如果网络还是不好，可以在后面添加 --index-url https://pypi.tuna.tsinghua.edu.cn/simple
 RUN --mount=type=cache,target=/root/.cache/uv \
     uv sync --group test --no-dev --frozen
 
 # IoT MQTT 客户端依赖（pyproject.toml 已声明，此处为容器内保底安装）
-RUN pip install --no-cache-dir paho-mqtt
+RUN pip install --no-cache-dir -i https://pypi.tuna.tsinghua.edu.cn/simple paho-mqtt
 
 # 激活虚拟环境并添加到PATH
 ENV PATH="/app/.venv/bin:$PATH"

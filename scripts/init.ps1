@@ -129,6 +129,7 @@ $images = @(
     "quay.io/coreos/etcd:v3.5.5",
     "postgres:16",
     "redis:7-alpine",
+    "eclipse-mosquitto:2",
     "enterprise-public-cn-beijing.cr.volces.com/vefaas-public/all-in-one-sandbox:latest"
 )
 

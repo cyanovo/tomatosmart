@@ -53,6 +53,7 @@ cache
 .cursor
 .trae
 .codex
+.codex_tmp/
 .sisyphus
 .pytest_cache
 

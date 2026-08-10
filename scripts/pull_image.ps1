@@ -3,54 +3,75 @@ param(
     [string]$ImageTag
 )
 
-# 当命令失败时，立即退出脚本
 $ErrorActionPreference = "Stop"
 
-Write-Host "Pulling image: $ImageTag" -ForegroundColor Green
+function Get-MirrorTag([string]$Image) {
+    $domesticPrefixes = @(
+        "enterprise-public-cn-beijing.cr.volces.com/",
+        "ccr-2vdh3abv-pub.cnc.bj.baidubce.com/",
+        "docker.m.daocloud.io/",
+        "m.daocloud.io/"
+    )
 
-# 计算斜杠数量来确定镜像格式
-$slashCount = ($ImageTag -split '/' | Measure-Object).Count - 1
+    foreach ($prefix in $domesticPrefixes) {
+        if ($Image.StartsWith($prefix)) {
+            return $null
+        }
+    }
 
-# 根据镜像格式设置镜像 URL
-switch ($slashCount) {
-    0 {
-        # 无前缀 (例如: python:3.12-slim)
-        $mirrorUrl = "m.daocloud.io/docker.io/library"
-        Write-Host "Image format: Official image (no prefix)" -ForegroundColor Cyan
+    if ($Image.StartsWith("ghcr.io/") -or $Image.StartsWith("quay.io/") -or $Image.StartsWith("gcr.io/") -or $Image.StartsWith("registry.k8s.io/")) {
+        return "m.daocloud.io/$Image"
     }
-    1 {
-        # 一个前缀 (例如: milvusdb/milvus:latest)
-        $mirrorUrl = "m.daocloud.io/docker.io"
-        Write-Host "Image format: Hub repository (one prefix)" -ForegroundColor Cyan
+
+    if ($Image.StartsWith("docker.io/")) {
+        return "m.daocloud.io/$Image"
     }
-    default {
-        # 两个或更多前缀 (例如: quay.io/coreos/etcd:v3.5.5)
-        $mirrorUrl = "m.daocloud.io"
-        Write-Host "Image format: Third-party registry (multiple prefixes)" -ForegroundColor Cyan
+
+    $slashCount = ($Image -split '/' | Measure-Object).Count - 1
+    if ($slashCount -eq 0) {
+        return "m.daocloud.io/docker.io/library/$Image"
     }
+
+    if ($slashCount -eq 1) {
+        return "m.daocloud.io/docker.io/$Image"
+    }
+
+    return $null
 }
 
-$fullMirrorUrl = "$mirrorUrl/$ImageTag"
-Write-Host "Mirror URL: $fullMirrorUrl" -ForegroundColor Yellow
+function Pull-Image([string]$Image) {
+    Write-Host "Pulling: $Image" -ForegroundColor Yellow
+    docker pull $Image
+}
+
+Write-Host "Preparing image: $ImageTag" -ForegroundColor Green
+
+$mirrorTag = Get-MirrorTag $ImageTag
+
+if ($mirrorTag) {
+    try {
+        Write-Host "Trying China mirror: $mirrorTag" -ForegroundColor Cyan
+        Pull-Image $mirrorTag
+
+        if ($mirrorTag -ne $ImageTag) {
+            docker tag $mirrorTag $ImageTag
+            docker rmi $mirrorTag | Out-Null
+        }
+
+        Write-Host "Successfully pulled via China mirror: $ImageTag" -ForegroundColor Green
+        exit 0
+    } catch {
+        Write-Host "China mirror failed, falling back to original image: $ImageTag" -ForegroundColor Yellow
+    }
+} else {
+    Write-Host "Image is already from a China-friendly registry or unsupported mirror mapping. Pulling original tag." -ForegroundColor Cyan
+}
 
 try {
-    # 从镜像加速器拉取镜像
-    Write-Host "Step 1: Pulling image from mirror..." -ForegroundColor Blue
-    docker pull $fullMirrorUrl
-
-    # 重新标记为原始名称
-    Write-Host "Step 2: Tagging image with original name..." -ForegroundColor Blue
-    docker tag $fullMirrorUrl $ImageTag
-
-    # 删除镜像加速器标签
-    Write-Host "Step 3: Removing mirror tag..." -ForegroundColor Blue
-    docker rmi $fullMirrorUrl
-
-    Write-Host "`nProcess completed successfully!" -ForegroundColor Green
-    Write-Host "`nCurrent Docker images:" -ForegroundColor Yellow
-    docker images
-
+    Pull-Image $ImageTag
+    Write-Host "Successfully pulled original image: $ImageTag" -ForegroundColor Green
 } catch {
-    Write-Host "`nError occurred: $_" -ForegroundColor Red
+    Write-Host "Failed to pull image from both mirror and original source: $ImageTag" -ForegroundColor Red
+    Write-Host $_ -ForegroundColor Red
     exit 1
 }

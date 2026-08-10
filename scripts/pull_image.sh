@@ -5,35 +5,62 @@ if [ $# -ne 1 ]; then
     exit 1
 fi
 
-set -e  # 当命令失败时，立即退出脚本
+set -e
 
-IMAGE_TAG=$1
+IMAGE_TAG="$1"
 
-# Count the number of slashes to determine the image format
-SLASH_COUNT=$(echo $IMAGE_TAG | tr -cd '/' | wc -c)
+get_mirror_tag() {
+    local image="$1"
 
-# Set mirror URL based on image format
-if [ $SLASH_COUNT -eq 0 ]; then
-    # No prefix (e.g., python:3.12-slim)
-    MIRROR_URL="m.daocloud.io/docker.io/library"
-elif [ $SLASH_COUNT -eq 1 ]; then
-    # One prefix (e.g., milvusdb/milvus:latest)
-    MIRROR_URL="m.daocloud.io/docker.io"
+    case "$image" in
+        enterprise-public-cn-beijing.cr.volces.com/*|ccr-2vdh3abv-pub.cnc.bj.baidubce.com/*|docker.m.daocloud.io/*|m.daocloud.io/*)
+            echo ""
+            return
+            ;;
+        ghcr.io/*|quay.io/*|gcr.io/*|registry.k8s.io/*|docker.io/*)
+            echo "m.daocloud.io/$image"
+            return
+            ;;
+    esac
+
+    slash_count=$(printf '%s' "$image" | tr -cd '/' | wc -c | tr -d ' ')
+    if [ "$slash_count" -eq 0 ]; then
+        echo "m.daocloud.io/docker.io/library/$image"
+    elif [ "$slash_count" -eq 1 ]; then
+        echo "m.daocloud.io/docker.io/$image"
+    else
+        echo ""
+    fi
+}
+
+pull_image() {
+    local image="$1"
+    echo "Pulling: $image"
+    docker pull "$image"
+}
+
+echo "Preparing image: $IMAGE_TAG"
+
+MIRROR_TAG=$(get_mirror_tag "$IMAGE_TAG")
+
+if [ -n "$MIRROR_TAG" ]; then
+    echo "Trying China mirror: $MIRROR_TAG"
+    if pull_image "$MIRROR_TAG"; then
+        if [ "$MIRROR_TAG" != "$IMAGE_TAG" ]; then
+            docker tag "$MIRROR_TAG" "$IMAGE_TAG"
+            docker rmi "$MIRROR_TAG" >/dev/null || true
+        fi
+        echo "Successfully pulled via China mirror: $IMAGE_TAG"
+        exit 0
+    fi
+    echo "China mirror failed, falling back to original image: $IMAGE_TAG"
 else
-    # Two or more prefixes (e.g., quay.io/coreos/etcd:v3.5.5)
-    MIRROR_URL="m.daocloud.io"
+    echo "Image is already from a China-friendly registry or unsupported mirror mapping. Pulling original tag."
 fi
 
-# Pull image from mirror
-echo "Pulling image from mirror: $MIRROR_URL/$IMAGE_TAG"
-docker pull $MIRROR_URL/$IMAGE_TAG
-
-# Tag image with original name
-docker tag $MIRROR_URL/$IMAGE_TAG $IMAGE_TAG
-
-# Remove mirror image
-docker rmi $MIRROR_URL/$IMAGE_TAG
-
-docker images
-
-echo "Process completed successfully!"
+if pull_image "$IMAGE_TAG"; then
+    echo "Successfully pulled original image: $IMAGE_TAG"
+else
+    echo "Failed to pull image from both mirror and original source: $IMAGE_TAG" >&2
+    exit 1
+fi

@@ -76,15 +76,17 @@ services:
       # 检测模型配置
       DETECT_MODEL_PATH: ${DETECT_MODEL_PATH:-/app/package/yuxi/detect/models/best.pt}
       DETECT_CONFIDENCE_THRESHOLD: ${DETECT_CONFIDENCE_THRESHOLD:-0.5}
+      # 大模型视觉识别配置
+      VLM_MODEL: ${VLM_MODEL:-qwen3-vl-plus}
     # endregion api_envs
     command: uv run --no-sync --no-dev uvicorn server.main:app --host 0.0.0.0 --port 5050 --reload --reload-dir /app/server --reload-dir /app/package
     restart: unless-stopped
     healthcheck:
       test: ["CMD-SHELL", "curl -f http://localhost:5050/api/system/health || exit 1"]
-      interval: 30s
-      timeout: 15s
-      retries: 8
-      start_period: 180s
+      interval: 5s
+      timeout: 3s
+      retries: 30
+      start_period: 15s
     depends_on:
       postgres:
         condition: service_healthy

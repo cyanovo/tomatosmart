@@ -48,6 +48,7 @@
         </div>
         <div class="action-right">
           <button
+            v-if="!showCaptured"
             class="preview-btn"
             :class="{ active: cameraActive }"
             @click="toggleCamera"
@@ -56,37 +57,56 @@
             {{ cameraActive ? '关闭摄像头' : '开启摄像头' }}
           </button>
           <button
+            v-if="!showCaptured"
             class="capture-btn"
-            :disabled="detecting || !cameraActive"
+            :disabled="detecting || vlmAnalyzing || !cameraActive"
             @click="doCapture"
           >
             <Camera :size="18" />
             {{ detecting ? '检测中...' : '拍照检测' }}
+          </button>
+          <button
+            v-if="showCaptured"
+            class="retake-action-btn"
+            :disabled="detecting || vlmAnalyzing"
+            @click="retakePhoto"
+          >
+            <RotateCcw :size="18" />
+            重新拍照
           </button>
         </div>
       </section>
 
       <!-- 摄像头预览 + 检测结果 -->
       <section class="preview-result-section">
-        <!-- 左侧：摄像头预览 -->
+        <!-- 左侧：摄像头预览 / 拍摄照片 -->
         <div class="camera-panel">
           <div class="panel-header">
             <div class="section-title">
               <Camera :size="18" />
-              <h3>摄像头画面</h3>
+              <h3>{{ showCaptured ? '拍摄照片' : '摄像头画面' }}</h3>
             </div>
           </div>
           <div class="video-container">
+            <!-- 摄像头预览模式 -->
             <video
               ref="videoRef"
               autoplay
               playsinline
               muted
               class="camera-video"
-              v-show="cameraActive"
+              v-show="cameraActive && !showCaptured"
             ></video>
             <canvas ref="canvasRef" style="display: none;"></canvas>
-            <div class="camera-placeholder" v-if="!cameraActive">
+            <!-- 拍摄照片模式 -->
+            <img
+              v-if="showCaptured && capturedImageSrc"
+              :src="capturedImageSrc"
+              alt="拍摄照片"
+              class="captured-image"
+            />
+            <!-- 占位符 -->
+            <div class="camera-placeholder" v-if="!cameraActive && !showCaptured">
               <Camera :size="48" />
               <p>点击"开启摄像头"开始</p>
             </div>
@@ -103,14 +123,14 @@
             <span class="result-time" v-if="latestResult">{{ formatTime(latestResult.created_at) }}</span>
           </div>
 
-          <!-- 检测中状态 -->
-          <div class="detecting-state" v-if="detecting">
+          <!-- 检测中 / AI 分析中状态 -->
+          <div class="detecting-state" v-if="detecting || vlmAnalyzing">
             <div class="loading-spinner"></div>
-            <p>正在识别中...</p>
+            <p>{{ vlmAnalyzing ? '大模型正在分析...' : '正在识别中...' }}</p>
           </div>
 
-          <!-- 检测结果 -->
-          <div class="result-content" v-else-if="latestResult">
+          <!-- YOLO 检测结果（有标框图） -->
+          <div class="result-content" v-else-if="latestResult && latestResult.annotated_image_base64">
             <div class="annotated-image-wrapper">
               <img
                 :src="'data:image/jpeg;base64,' + latestResult.annotated_image_base64"
@@ -150,12 +170,105 @@
               <ClipboardCheck :size="16" />
               <span>{{ latestResult.recommendation }}</span>
             </div>
+            <!-- YOLO 成功 → AI 增强分析 -->
+            <button
+              class="vlm-enhance-btn"
+              :disabled="vlmAnalyzing"
+              @click="doVlmAnalyze"
+              v-if="latestResult.total_count > 0"
+            >
+              <Sparkles :size="16" />
+              {{ vlmAnalyzing ? 'AI 分析中...' : 'AI 增强分析' }}
+            </button>
+            <!-- YOLO 失败 → 使用大模型重新检测 -->
+            <div class="vlm-fallback" v-if="latestResult.total_count === 0">
+              <p class="fallback-hint">YOLO 未检测到番茄，可尝试使用大模型识别</p>
+              <button
+                class="vlm-fallback-btn"
+                :disabled="vlmAnalyzing"
+                @click="doVlmAnalyze"
+              >
+                <Sparkles :size="16" />
+                {{ vlmAnalyzing ? 'AI 分析中...' : '使用大模型检测' }}
+              </button>
+            </div>
+          </div>
+
+          <!-- 仅有 VLM 结果（YOLO 失败后，无标框图） -->
+          <div class="result-content vlm-only-result" v-else-if="vlmResult && showCaptured">
+            <div class="annotated-image-wrapper">
+              <img
+                :src="vlmResult.annotated_image_base64 ? 'data:image/jpeg;base64,' + vlmResult.annotated_image_base64 : capturedImageSrc"
+                alt="检测结果"
+                class="annotated-image"
+              />
+            </div>
+            <div class="vlm-result-badge">
+              <Sparkles :size="14" />
+              <span>大模型识别结果</span>
+            </div>
           </div>
 
           <!-- 空状态 -->
           <div class="empty-state" v-else>
             <ScanLine :size="48" />
             <p>开启摄像头后点击"拍照检测"</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- 大模型分析结果 -->
+      <section class="vlm-section" v-if="vlmResult || vlmAnalyzing">
+        <div class="vlm-header">
+          <div class="section-title">
+            <Sparkles :size="18" />
+            <h3>大模型智能分析</h3>
+          </div>
+          <span class="vlm-badge">Qwen3-VL-Plus</span>
+        </div>
+
+        <div class="vlm-loading" v-if="vlmAnalyzing">
+          <div class="loading-spinner"></div>
+          <p>大模型正在分析图片，请稍候...</p>
+        </div>
+
+        <div class="vlm-content" v-else-if="vlmResult">
+          <div class="vlm-grid">
+            <div class="vlm-card maturity-card">
+              <div class="vlm-card-header">
+                <Gauge :size="16" />
+                <span>成熟度评估</span>
+              </div>
+              <div class="vlm-card-body">
+                <span class="vlm-level" :class="vlmLevelClass">{{ vlmResult.maturity_level }}</span>
+                <p>{{ vlmResult.maturity_detail }}</p>
+              </div>
+            </div>
+
+            <div class="vlm-card advice-card">
+              <div class="vlm-card-header">
+                <Sprout :size="16" />
+                <span>种植建议</span>
+              </div>
+              <div class="vlm-card-body">
+                <p>{{ vlmResult.planting_advice }}</p>
+              </div>
+            </div>
+
+            <div class="vlm-card pest-card">
+              <div class="vlm-card-header">
+                <Bug :size="16" />
+                <span>病虫害识别</span>
+              </div>
+              <div class="vlm-card-body">
+                <p>{{ vlmResult.pest_disease }}</p>
+              </div>
+            </div>
+          </div>
+
+          <div class="vlm-summary" v-if="vlmResult.overall_summary">
+            <ClipboardCheck :size="16" />
+            <span>{{ vlmResult.overall_summary }}</span>
           </div>
         </div>
       </section>
@@ -224,11 +337,14 @@
 import { computed, ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import {
+  Bug,
   Camera,
   ClipboardCheck,
   Gauge,
+  RotateCcw,
   Route,
   ScanLine,
+  Sparkles,
   Sprout,
   Timer,
   Video
@@ -237,6 +353,7 @@ import PageHeader from '@/components/shared/PageHeader.vue'
 import PageAgentDropdown from '@/components/PageAgentDropdown.vue'
 import { getHarvestThreshold, setHarvestThreshold } from '@/data/tomatoData.js'
 import { captureAndDetect, getDetectHistory, listCameras } from '@/apis/detect_api.js'
+import { analyzeBase64 } from '@/apis/vlm_api.js'
 
 const router = useRouter()
 
@@ -257,6 +374,15 @@ const latestResult = ref(null)
 const historyRecords = ref([])
 const availableCameras = ref([])
 const selectedCameraId = ref(0)
+
+// 大模型分析状态
+const vlmAnalyzing = ref(false)
+const vlmResult = ref(null)
+let lastCapturedBase64 = null  // 缓存最近一次拍照的 base64，供 VLM 复用
+
+// 拍照状态：拍照后左侧显示拍摄的照片，右侧显示标框结果
+const showCaptured = ref(false)
+const capturedImageSrc = ref('')
 
 // DOM refs
 const videoRef = ref(null)
@@ -339,6 +465,7 @@ async function doCapture() {
   }
 
   detecting.value = true
+  vlmResult.value = null  // 清除之前的 AI 分析结果
 
   try {
     // 从视频捕获帧
@@ -348,6 +475,14 @@ async function doCapture() {
     canvas.height = video.videoHeight || 480
     const ctx = canvas.getContext('2d')
     ctx.drawImage(video, 0, 0, canvas.width, canvas.height)
+
+    // 缓存 base64 供 VLM 复用
+    lastCapturedBase64 = canvas.toDataURL('image/jpeg', 0.85)
+    capturedImageSrc.value = lastCapturedBase64
+
+    // 停止摄像头，切换到显示拍摄照片模式
+    stopCamera()
+    showCaptured.value = true
 
     // 转为 Blob
     const blob = await new Promise(resolve => {
@@ -362,12 +497,76 @@ async function doCapture() {
     // 刷新历史
     await loadHistory()
   } catch (e) {
-    console.error('检测失败:', e)
-    alert('检测失败: ' + e.message)
+    // YOLO 检测失败（如 502），自动切换到大模型检测
+    console.warn('YOLO 检测失败，自动切换到大模型检测:', e.message)
+    await doVlmAnalyze()
   } finally {
     detecting.value = false
   }
 }
+
+// 重新拍照：清除拍摄状态，重新开启摄像头
+async function retakePhoto() {
+  showCaptured.value = false
+  capturedImageSrc.value = ''
+  latestResult.value = null
+  vlmResult.value = null
+  lastCapturedBase64 = null
+  await startCamera()
+}
+
+// 大模型 AI 分析（复用 YOLO 拍照时缓存的图片）
+async function doVlmAnalyze() {
+  if (!lastCapturedBase64) {
+    alert('请先点击"拍照检测"获取图片')
+    return
+  }
+
+  vlmAnalyzing.value = true
+  vlmResult.value = null
+
+  try {
+    const resp = await analyzeBase64(lastCapturedBase64)
+    if (resp.ok && resp.result) {
+      vlmResult.value = resp.result
+
+      // 如果 YOLO 没有结果（fallback 场景），用 VLM 的结果填充 latestResult
+      // 这样右侧面板会显示 VLM 的标框图
+      if (!latestResult.value || latestResult.value.total_count === 0) {
+        const v = resp.result
+        latestResult.value = {
+          id: 'vlm-' + Date.now(),
+          zone: selectedZone.value,
+          total_count: v.total_count || 0,
+          ripe_count: v.ripe_count || 0,
+          half_ripe_count: v.half_ripe_count || 0,
+          unripe_count: v.unripe_count || 0,
+          maturity_ratio: v.maturity_ratio || 0,
+          confidence_threshold: 0,
+          detections: v.detections || [],
+          recommendation: v.overall_summary || '大模型分析完成',
+          annotated_image_base64: v.annotated_image_base64 || '',
+          created_at: new Date().toISOString()
+        }
+      }
+    } else {
+      alert('分析失败：未获取到结果')
+    }
+  } catch (e) {
+    console.error('大模型分析失败:', e)
+    alert('AI 分析失败: ' + e.message)
+  } finally {
+    vlmAnalyzing.value = false
+  }
+}
+
+// VLM 成熟度等级样式
+const vlmLevelClass = computed(() => {
+  const level = vlmResult.value?.maturity_level || ''
+  if (level.includes('成熟') && !level.includes('未') && !level.includes('半')) return 'ripe'
+  if (level.includes('半成熟')) return 'half'
+  return 'unripe'
+})
 
 // 上传图片检测
 async function detectFromImage(file, zone = 'A', conf_threshold = 0.5) {
@@ -397,20 +596,36 @@ async function loadHistory() {
 // 汇总卡片
 const summary = computed(() => {
   const r = latestResult.value
-  if (!r) {
+  const v = vlmResult.value
+
+  // 如果有 VLM 结果，使用 VLM 的真实数据
+  if (v && v.total_count > 0) {
+    const yieldKg = Math.round(v.ripe_count * 0.1)
     return [
-      { label: '本次识别总数', value: '—', note: '等待检测', icon: Sprout },
-      { label: '平均成熟度', value: '—', note: '等待检测', icon: Gauge },
-      { label: '建议采摘量', value: '—', note: '等待检测', icon: Timer },
-      { label: '检测状态', value: '就绪', note: cameraReady.value ? '摄像头已连接' : '摄像头未连接', icon: ScanLine }
+      { label: '本次识别总数', value: `${v.total_count} 颗`, note: '大模型识别', icon: Sprout },
+      { label: '平均成熟度', value: `${v.maturity_ratio}%`, note: `AI: ${v.maturity_level}`, icon: Gauge },
+      { label: '建议采摘量', value: `${yieldKg} kg`, note: `${v.ripe_count} 颗成熟果`, icon: Timer },
+      { label: '检测状态', value: 'AI 完成', note: 'Qwen3-VL-Plus', icon: Sparkles }
     ]
   }
-  const yieldKg = Math.round(r.ripe_count * 0.1)
+
+  // YOLO 检测结果
+  if (r && r.total_count > 0) {
+    const yieldKg = Math.round(r.ripe_count * 0.1)
+    return [
+      { label: '本次识别总数', value: `${r.total_count} 颗`, note: `${getZoneName(r.zone)} 检测`, icon: Sprout },
+      { label: '平均成熟度', value: `${r.maturity_ratio}%`, note: r.maturity_ratio >= harvestThreshold.value ? '达到采摘阈值' : '未达阈值', icon: Gauge },
+      { label: '建议采摘量', value: `${yieldKg} kg`, note: `${r.ripe_count} 颗成熟果`, icon: Timer },
+      { label: '检测状态', value: '完成', note: `阈值 ${r.confidence_threshold}`, icon: ScanLine }
+    ]
+  }
+
+  // 默认状态
   return [
-    { label: '本次识别总数', value: `${r.total_count} 颗`, note: `${getZoneName(r.zone)} 检测`, icon: Sprout },
-    { label: '平均成熟度', value: `${r.maturity_ratio}%`, note: r.maturity_ratio >= harvestThreshold.value ? '达到采摘阈值' : '未达阈值', icon: Gauge },
-    { label: '建议采摘量', value: `${yieldKg} kg`, note: `${r.ripe_count} 颗成熟果`, icon: Timer },
-    { label: '检测状态', value: '完成', note: `阈值 ${r.confidence_threshold}`, icon: ScanLine }
+    { label: '本次识别总数', value: '—', note: '等待检测', icon: Sprout },
+    { label: '平均成熟度', value: '—', note: '等待检测', icon: Gauge },
+    { label: '建议采摘量', value: '—', note: '等待检测', icon: Timer },
+    { label: '检测状态', value: '就绪', note: cameraReady.value ? '摄像头已连接' : '摄像头未连接', icon: ScanLine }
   ]
 })
 
@@ -624,6 +839,32 @@ onUnmounted(() => {
   }
 }
 
+.retake-action-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+  height: 36px;
+  padding: 0 16px;
+  border: 2px solid var(--main-color);
+  border-radius: 8px;
+  background: var(--gray-0);
+  color: var(--main-color);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: var(--main-50);
+  }
+  &:disabled {
+    border-color: var(--gray-200);
+    color: var(--gray-400);
+    cursor: not-allowed;
+  }
+}
+
 /* 预览+结果区域 */
 .preview-result-section {
   display: grid;
@@ -684,6 +925,32 @@ onUnmounted(() => {
   object-fit: contain;
 }
 
+.captured-image {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+}
+
+.retake-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: var(--gray-0);
+  color: var(--gray-700);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover {
+    border-color: var(--main-color);
+    color: var(--main-color);
+  }
+}
+
 .camera-placeholder {
   display: flex;
   flex-direction: column;
@@ -733,6 +1000,22 @@ onUnmounted(() => {
   flex-direction: column;
   padding: 16px;
   gap: 14px;
+}
+
+.vlm-only-result {
+  align-items: center;
+}
+
+.vlm-result-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border-radius: 16px;
+  background: var(--color-accent-50);
+  color: var(--color-accent-700);
+  font-size: 12px;
+  font-weight: 600;
 }
 
 .annotated-image-wrapper {
@@ -839,6 +1122,78 @@ onUnmounted(() => {
   color: var(--gray-800);
   font-size: 13px;
   line-height: 20px;
+}
+
+/* AI 增强分析按钮（YOLO 成功后） */
+.vlm-enhance-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  justify-content: center;
+  height: 36px;
+  padding: 0 16px;
+  border: 2px solid var(--color-accent-500);
+  border-radius: 8px;
+  background: var(--color-accent-50);
+  color: var(--color-accent-700);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    background: var(--color-accent-100);
+  }
+  &:disabled {
+    border-color: var(--gray-200);
+    background: var(--gray-10);
+    color: var(--gray-400);
+    cursor: not-allowed;
+  }
+}
+
+/* YOLO 失败时的大模型回退区域 */
+.vlm-fallback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 10px;
+  padding: 12px;
+  border-radius: 8px;
+  background: var(--color-warning-50);
+}
+
+.fallback-hint {
+  margin: 0;
+  color: var(--color-warning-900);
+  font-size: 13px;
+}
+
+.vlm-fallback-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 160px;
+  height: 36px;
+  padding: 0 16px;
+  border: none;
+  border-radius: 8px;
+  background: var(--color-accent-500);
+  color: var(--gray-0);
+  font-size: 14px;
+  font-weight: 650;
+  cursor: pointer;
+  transition: all 0.2s;
+
+  &:hover:not(:disabled) {
+    opacity: 0.9;
+  }
+  &:disabled {
+    background: var(--gray-200);
+    color: var(--gray-500);
+    cursor: not-allowed;
+  }
 }
 
 .empty-state {
@@ -1036,6 +1391,129 @@ onUnmounted(() => {
   }
 }
 
+/* 大模型分析区域 */
+.vlm-section {
+  padding: 18px;
+  border: 1px solid var(--color-accent-100);
+  border-radius: 8px;
+  background: var(--gray-0);
+}
+
+.vlm-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.vlm-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 12px;
+  background: var(--color-accent-50);
+  color: var(--color-accent-700);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.vlm-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 40px 20px;
+  color: var(--color-accent-700);
+
+  p {
+    margin: 0;
+    font-size: 14px;
+  }
+}
+
+.vlm-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 12px;
+}
+
+.vlm-card {
+  padding: 16px;
+  border: 1px solid var(--gray-150);
+  border-radius: 8px;
+  background: var(--gray-10);
+}
+
+.vlm-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+  color: var(--gray-700);
+  font-size: 13px;
+  font-weight: 600;
+
+  svg {
+    color: var(--color-accent-500);
+  }
+}
+
+.vlm-card-body {
+  p {
+    margin: 0;
+    color: var(--gray-800);
+    font-size: 13px;
+    line-height: 1.6;
+  }
+}
+
+.vlm-level {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 60px;
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 14px;
+  font-weight: 650;
+  margin-bottom: 8px;
+
+  &.ripe {
+    background: var(--color-success-50);
+    color: var(--color-success-700);
+  }
+  &.half {
+    background: var(--color-warning-50);
+    color: var(--color-warning-900);
+  }
+  &.unripe {
+    background: var(--color-info-50);
+    color: var(--color-info-700);
+  }
+}
+
+.vlm-summary {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  margin-top: 14px;
+  padding: 12px 16px;
+  border-radius: 8px;
+  background: var(--color-accent-50);
+  color: var(--gray-800);
+  font-size: 13px;
+  line-height: 1.6;
+
+  svg {
+    flex-shrink: 0;
+    margin-top: 2px;
+    color: var(--color-accent-500);
+  }
+}
+
 @media (max-width: 1180px) {
   .preview-result-section {
     grid-template-columns: 1fr;
@@ -1044,6 +1522,9 @@ onUnmounted(() => {
     grid-template-columns: repeat(2, 1fr);
   }
   .records-layout {
+    grid-template-columns: 1fr;
+  }
+  .vlm-grid {
     grid-template-columns: 1fr;
   }
 }

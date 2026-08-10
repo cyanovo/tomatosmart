@@ -16,6 +16,7 @@ from yuxi.iot.mqtt_client import mqtt_client
 from yuxi.services.iot_service import iot_service
 from yuxi.services.detect_service import detect_service
 from yuxi.repositories.detect_repository import detect_repository
+from yuxi.services.vlm_service import vlm_service
 from yuxi import get_version
 
 
@@ -114,6 +115,12 @@ async def lifespan(app: FastAPI):
         await detect_service.initialize()
     except Exception as e:
         logger.error(f"Failed to initialize detect service: {e}")
+
+    # 初始化大模型视觉识别服务
+    try:
+        vlm_service.initialize()
+    except Exception as e:
+        logger.error(f"Failed to initialize VLM service: {e}")
 
     # =========================================================
     # 2. 核心修复：在这里执行一次 setup()，建完表就拉倒

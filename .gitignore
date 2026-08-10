@@ -81,3 +81,7 @@ docs/vibe
 /models
 
 .taskr/
+
+# Reasonix 桌面工具本地数据
+.reasonix/
+reasonix.toml

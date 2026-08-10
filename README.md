@@ -61,26 +61,60 @@
 
 ### 首次启动
 
+**方式一：使用初始化脚本（推荐）**
+
+Windows PowerShell:
+```powershell
+git clone <repository-url>
+cd Newsmart-Strawberry
+.\scripts\init.ps1          # 交互式引导配置 .env
+docker compose up -d --build
+```
+
+Linux / macOS Bash:
+```bash
+git clone <repository-url>
+cd Newsmart-Strawberry
+chmod +x scripts/init.sh
+./scripts/init.sh           # 交互式引导配置 .env
+docker compose up -d --build
+```
+
+**方式二：手动配置**
+
 ```bash
 # 1. 克隆项目
 git clone <repository-url>
 cd Newsmart-Strawberry
 
-# 2. 配置环境变量
-cp .env.example .env
-# 编辑 .env，填写大模型 API Key 和管理员密码
+# 2. 复制环境变量模板并编辑
+cp .env.template .env
+# 必填项：SILICONFLOW_API_KEY（大模型服务）
+# 可选项：TAVILY_API_KEY（搜索服务）
+# JWT_SECRET_KEY 和 GREENHOUSE_INSTANCE_ID 留空会自动生成
 
 # 3. 构建并启动所有服务
 docker compose up -d --build
 
 # 4. 等待服务启动完成（约1-2分钟）
+docker compose logs -f api-dev   # 看到 "Application startup complete" 表示就绪
 
-# 5. 启动本地检测服务（用于摄像头功能）
-python scripts/run_detect_local.py
-
-# 6. 访问系统
+# 5. 访问系统
 # 浏览器打开 http://localhost:5173
-# 管理员账号: admin / admin123
+# 首次访问会引导创建管理员账户
+```
+
+### 环境检查（可选）
+
+如果启动遇到问题，可以运行环境检查脚本：
+
+```bash
+# Windows PowerShell
+.\scripts\check-env.ps1
+
+# Linux / macOS
+chmod +x scripts/check-env.sh
+./scripts/check-env.sh
 ```
 
 ### 日常启动

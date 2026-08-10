@@ -12,30 +12,36 @@ function Test-EnvValue($Name) {
     return [bool](Select-String -Path ".env" -Pattern "^$Name=.+" -Quiet)
 }
 
+function Set-EnvValue($Name, $Value) {
+    $line = "$Name=$Value"
+    if (Select-String -Path ".env" -Pattern "^$Name=" -Quiet) {
+        $content = Get-Content -Path ".env"
+        $content = $content | ForEach-Object {
+            if ($_ -match "^$Name=") { $line } else { $_ }
+        }
+        $content | Set-Content -Path ".env" -Encoding UTF8
+    } else {
+        Add-Content -Path ".env" -Value $line -Encoding UTF8
+    }
+}
+
 function Ensure-JwtEnv {
     if ((Test-EnvValue "JWT_SECRET_KEY") -and (Test-EnvValue "GREENHOUSE_INSTANCE_ID")) {
         return
     }
 
-    Write-Host "JWT security settings are missing in .env." -ForegroundColor Yellow
-    $JWT_SECRET_KEY = Read-Host "Please enter your JWT_SECRET_KEY (press Enter to auto-generate)"
-    if ([string]::IsNullOrEmpty($JWT_SECRET_KEY)) {
+    Write-Host "JWT security settings are missing in .env. Generating local values..." -ForegroundColor Yellow
+    if (-not (Test-EnvValue "JWT_SECRET_KEY")) {
         $JWT_SECRET_KEY = New-RandomHex 32
-        Write-Host "Generated JWT_SECRET_KEY and saved it to .env." -ForegroundColor Green
+        Set-EnvValue "JWT_SECRET_KEY" $JWT_SECRET_KEY
     }
 
-    $GREENHOUSE_INSTANCE_ID = Read-Host "Please enter your GREENHOUSE_INSTANCE_ID (press Enter to auto-generate)"
-    if ([string]::IsNullOrEmpty($GREENHOUSE_INSTANCE_ID)) {
+    if (-not (Test-EnvValue "GREENHOUSE_INSTANCE_ID")) {
         $GREENHOUSE_INSTANCE_ID = "instance-$(New-RandomHex 8)"
-        Write-Host "Generated GREENHOUSE_INSTANCE_ID and saved it to .env." -ForegroundColor Green
+        Set-EnvValue "GREENHOUSE_INSTANCE_ID" $GREENHOUSE_INSTANCE_ID
     }
 
-    @"
-
-# JWT security settings
-JWT_SECRET_KEY=$JWT_SECRET_KEY
-GREENHOUSE_INSTANCE_ID=$GREENHOUSE_INSTANCE_ID
-"@ | Add-Content -Path ".env" -Encoding UTF8
+    Write-Host "Generated JWT_SECRET_KEY and GREENHOUSE_INSTANCE_ID in .env." -ForegroundColor Green
 }
 
 Write-Host "🚀 Initializing Greenhouse Strawberry project..." -ForegroundColor Cyan

@@ -19,26 +19,32 @@ ensure_jwt_env() {
         return
     fi
 
-    echo "JWT security settings are missing in .env."
-    read -s -p "Please enter your JWT_SECRET_KEY (press Enter to auto-generate): " JWT_SECRET_KEY
-    echo ""
-    if [ -z "$JWT_SECRET_KEY" ]; then
+    set_env_value() {
+        local name="$1"
+        local value="$2"
+        if grep -Eq "^${name}=" .env; then
+            if sed --version >/dev/null 2>&1; then
+                sed -i "s|^${name}=.*|${name}=${value}|" .env
+            else
+                sed -i '' "s|^${name}=.*|${name}=${value}|" .env
+            fi
+        else
+            printf '%s=%s\n' "$name" "$value" >> .env
+        fi
+    }
+
+    echo "JWT security settings are missing in .env. Generating local values..."
+    if ! grep -Eq '^JWT_SECRET_KEY=.+' .env; then
         JWT_SECRET_KEY=$(generate_hex 32)
-        echo "Generated JWT_SECRET_KEY and saved it to .env."
+        set_env_value "JWT_SECRET_KEY" "$JWT_SECRET_KEY"
     fi
 
-    read -p "Please enter your GREENHOUSE_INSTANCE_ID (press Enter to auto-generate): " GREENHOUSE_INSTANCE_ID
-    if [ -z "$GREENHOUSE_INSTANCE_ID" ]; then
+    if ! grep -Eq '^GREENHOUSE_INSTANCE_ID=.+' .env; then
         GREENHOUSE_INSTANCE_ID="instance-$(generate_hex 8)"
-        echo "Generated GREENHOUSE_INSTANCE_ID and saved it to .env."
+        set_env_value "GREENHOUSE_INSTANCE_ID" "$GREENHOUSE_INSTANCE_ID"
     fi
 
-    cat >> .env << EOF
-
-# JWT security settings
-JWT_SECRET_KEY=${JWT_SECRET_KEY}
-GREENHOUSE_INSTANCE_ID=${GREENHOUSE_INSTANCE_ID}
-EOF
+    echo "Generated JWT_SECRET_KEY and GREENHOUSE_INSTANCE_ID in .env."
 }
 
 echo "🚀 Initializing Greenhouse Strawberry project..."

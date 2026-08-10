@@ -23,7 +23,7 @@ git clone <repository-url>
 cd Newsmart-Strawberry
 ```
 
-### 3. 初始化配置
+### 3. 初始化配置并预下载镜像
 
 Windows:
 
@@ -38,7 +38,7 @@ chmod +x scripts/init.sh
 ./scripts/init.sh
 ```
 
-初始化脚本会引导创建 `.env`，至少需要填写 `SILICONFLOW_API_KEY`。`TAVILY_API_KEY` 是可选项，用于联网搜索。
+课堂私有仓库已经内置 `.env` 配置。初始化脚本会自动补齐本机专用的 `JWT_SECRET_KEY` 和 `GREENHOUSE_INSTANCE_ID`，并通过国内镜像源预下载公开依赖镜像。
 
 ### 4. 构建并启动
 
@@ -46,7 +46,7 @@ chmod +x scripts/init.sh
 docker compose up -d --build
 ```
 
-首次启动需要下载镜像和安装依赖，耗时较长。启动完成后查看状态：
+首次启动仍需要构建本项目自己的 `greenhouse-api`、`greenhouse-web` 和 `greenhouse-sandbox-provisioner` 镜像，但公开基础镜像会在上一步优先下载好。启动完成后查看状态：
 
 ```bash
 docker compose ps

@@ -161,6 +161,19 @@ const router = createRouter({
       ]
     },
     {
+      path: '/trace-query',
+      name: 'trace-query',
+      component: BlankLayout,
+      children: [
+        {
+          path: '',
+          name: 'TraceQueryComp',
+          component: () => import('../views/TraceQueryView.vue'),
+          meta: { requiresAuth: false }
+        }
+      ]
+    },
+    {
       path: '/dashboard',
       name: 'dashboard',
       component: AppLayout,

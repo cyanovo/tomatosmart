@@ -227,10 +227,10 @@ class Inspection(BaseModel):
 
 class PackageCreate(BaseModel):
     batch_id: str
-    package_date: str
-    weight_kg: Optional[float] = None
+    package_date: str = Field(..., description="包装日期")
+    weight_kg: float = Field(..., gt=0, description="重量（kg），必须大于 0")
     shelf_life_days: Optional[int] = None
-    lot_number: str = Field("", description="生产批号")
+    lot_number: str = Field(..., min_length=1, description="生产批号，必填")
     package_spec: str = Field("", description="包装规格")
     operator: str = ""
 
@@ -258,6 +258,7 @@ class TraceCode(BaseModel):
     created_at: str
     is_active: bool = True
     data_hash: str = ""  # 数据哈希校验值
+    data_scope: str = ""  # 包装时刻锁定的记录 ID 快照（JSON）
 
 
 # ── 溯源报告（消费者查询结果） ──────────────────────────────────
@@ -531,6 +532,12 @@ def init_db():
     # 数据库迁移：添加 data_hash 列到 trace_codes 表
     try:
         c.execute("ALTER TABLE trace_codes ADD COLUMN data_hash TEXT DEFAULT ''")
+    except sqlite3.OperationalError:
+        pass  # 列已存在
+
+    # 数据库迁移：添加 data_scope 列到 trace_codes 表
+    try:
+        c.execute("ALTER TABLE trace_codes ADD COLUMN data_scope TEXT DEFAULT ''")
     except sqlite3.OperationalError:
         pass  # 列已存在
 
@@ -917,10 +924,57 @@ def list_packages(batch_id: str) -> List[Package]:
 #  溯源码
 # ══════════════════════════════════════════════════════════════════════
 
-def _calculate_data_hash(batch_id: str, package_id: str, code: str) -> str:
-    """计算溯源数据哈希值，用于校验数据完整性"""
+def _rows_for_scope(batch_id: str, data_scope: Optional[List[str]]) -> Dict[str, List[Dict[str, Any]]]:
+    """读取指定批次各类型记录，data_scope 非空时仅保留锁定的记录 ID。"""
     conn = _get_conn()
-    # 收集所有相关数据
+    result: Dict[str, List[Dict[str, Any]]] = {}
+    for table in ("activities", "environments", "harvests", "inspections"):
+        rows = conn.execute(
+            f"SELECT * FROM {table} WHERE batch_id = ?", (batch_id,)
+        ).fetchall()
+        items = [dict(r) for r in rows]
+        if data_scope is not None:
+            items = [d for d in items if d["id"] in data_scope]
+        result[table] = items
+    conn.close()
+    return result
+
+
+def _calculate_data_hash(batch_id: str, package_id: str, code: str, data_scope: Optional[List[str]] = None) -> str:
+    """计算溯源数据哈希值，用于校验数据完整性。
+
+    校验语义基于「包装时刻快照」：
+    - 包装之前已存在的采摘/质检/环境/农事记录属于该包装的来源信息，必须被锁定校验；
+    - 包装之后新追加的记录与该包装无关，不应参与校验。
+    因此只对 data_scope 锁定的记录 ID 重新读取并参与哈希；
+    data_scope 为 None 时（生成溯源码时）锁定当前全部记录。
+    """
+    conn = _get_conn()
+    batch = conn.execute("SELECT * FROM batches WHERE id = ?", (batch_id,)).fetchone()
+    package = conn.execute("SELECT * FROM packages WHERE id = ?", (package_id,)).fetchone()
+    conn.close()
+
+    # 构建数据摘要（排除 trace_code 字段，因为它是在哈希计算后才更新的）
+    pkg_dict = dict(package) if package else {}
+    pkg_dict.pop('trace_code', None)  # 移除 trace_code 字段
+
+    scoped = _rows_for_scope(batch_id, data_scope)
+    data_parts = [
+        f"code:{code}",
+        f"batch_code:{batch['batch_code'] if batch else ''}",
+        f"package:{pkg_dict}",
+        f"activities:{scoped['activities']}",
+        f"environments:{scoped['environments']}",
+        f"harvests:{scoped['harvests']}",
+        f"inspections:{scoped['inspections']}",
+    ]
+    data_str = "|".join(str(part) for part in data_parts)
+    return hashlib.sha256(data_str.encode('utf-8')).hexdigest()
+
+
+def _calculate_legacy_data_hash(batch_id: str, package_id: str, code: str) -> str:
+    """旧版溯源数据哈希（兼容历史溯源码，保持原校验语义不变）。"""
+    conn = _get_conn()
     batch = conn.execute("SELECT * FROM batches WHERE id = ?", (batch_id,)).fetchone()
     package = conn.execute("SELECT * FROM packages WHERE id = ?", (package_id,)).fetchone()
     activities = conn.execute("SELECT * FROM activities WHERE batch_id = ?", (batch_id,)).fetchall()
@@ -953,19 +1007,28 @@ def generate_trace_code(package_id: str, batch_id: str) -> TraceCode:
     tcid = _uid("TC-")
     qr_url = f"/api/trace/{code}"
 
-    # 计算数据哈希
+    # 锁定包装时刻已存在的记录 ID 快照（采摘/质检/环境/农事）
+    scope_ids = {
+        "activities": [r["id"] for r in conn.execute("SELECT id FROM activities WHERE batch_id = ?", (batch_id,)).fetchall()],
+        "environments": [r["id"] for r in conn.execute("SELECT id FROM environments WHERE batch_id = ?", (batch_id,)).fetchall()],
+        "harvests": [r["id"] for r in conn.execute("SELECT id FROM harvests WHERE batch_id = ?", (batch_id,)).fetchall()],
+        "inspections": [r["id"] for r in conn.execute("SELECT id FROM inspections WHERE batch_id = ?", (batch_id,)).fetchall()],
+    }
+    data_scope = json.dumps(scope_ids, ensure_ascii=False)
+
+    # 计算数据哈希（锁定当前全部记录）
     data_hash = _calculate_data_hash(batch_id, package_id, code)
 
     conn.execute(
-        "INSERT INTO trace_codes (id, package_id, batch_id, code, qr_url, created_at, data_hash) VALUES (?,?,?,?,?,?,?)",
-        (tcid, package_id, batch_id, code, qr_url, _now(), data_hash)
+        "INSERT INTO trace_codes (id, package_id, batch_id, code, qr_url, created_at, data_hash, data_scope) VALUES (?,?,?,?,?,?,?,?)",
+        (tcid, package_id, batch_id, code, qr_url, _now(), data_hash, data_scope)
     )
     # 回写到包装记录
     conn.execute("UPDATE packages SET trace_code = ? WHERE id = ?", (code, package_id))
     conn.commit()
     conn.close()
     _create_event(batch_id, "trace_code_generated", "生成溯源码", note=f"溯源码={code}")
-    return TraceCode(id=tcid, package_id=package_id, batch_id=batch_id, code=code, qr_url=qr_url, created_at=_now(), data_hash=data_hash)
+    return TraceCode(id=tcid, package_id=package_id, batch_id=batch_id, code=code, qr_url=qr_url, created_at=_now(), data_hash=data_hash, data_scope=data_scope)
 
 def get_trace_code(code: str) -> Optional[TraceCode]:
     conn = _get_conn()
@@ -991,7 +1054,22 @@ def get_trace_report(code: str) -> Optional[TraceReport]:
         return None
 
     # 验证数据哈希
-    current_hash = _calculate_data_hash(tc.batch_id, tc.package_id, tc.code)
+    # - 新溯源码：只对包装时刻锁定的记录重新哈希，包装后追加的记录不参与校验
+    # - 旧溯源码（data_scope 为空）：沿用旧版哈希公式，保持历史校验语义
+    if tc.data_scope:
+        try:
+            scope_map = json.loads(tc.data_scope)
+            scope_ids = (
+                scope_map.get("activities", [])
+                + scope_map.get("environments", [])
+                + scope_map.get("harvests", [])
+                + scope_map.get("inspections", [])
+            )
+        except (ValueError, AttributeError):
+            scope_ids = None  # 数据异常时退回全量校验
+        current_hash = _calculate_data_hash(tc.batch_id, tc.package_id, tc.code, data_scope=scope_ids)
+    else:
+        current_hash = _calculate_legacy_data_hash(tc.batch_id, tc.package_id, tc.code)
     hash_verified = (current_hash == tc.data_hash)
     tamper_detected = not hash_verified
 

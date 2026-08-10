@@ -1,6 +1,18 @@
 import { apiGet, apiPost, apiPut, apiDelete } from './base'
 
 // ══════════════════════════════════════════════════════════════════════
+//  公开溯源查询（无需登录，消费者使用）
+// ══════════════════════════════════════════════════════════════════════
+
+export function traceQueryPublic(code) {
+  return apiGet(`/api/trace/query/${code}`, {}, false)
+}
+
+export function traceByBatchCodePublic(batchCode) {
+  return apiGet(`/api/trace/query/batch/${batchCode}`, {}, false)
+}
+
+// ══════════════════════════════════════════════════════════════════════
 //  统计
 // ══════════════════════════════════════════════════════════════════════
 

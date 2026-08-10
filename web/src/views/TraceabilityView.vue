@@ -61,6 +61,10 @@
               <div class="card-header">
                 <Search :size="16" />
                 <h3>溯源查询</h3>
+                <button class="consumer-link-btn" @click="openConsumerPage">
+                  <ExternalLink :size="14" />
+                  <span>消费者查询页</span>
+                </button>
               </div>
               <div class="query-form">
                 <input
@@ -586,7 +590,7 @@ import { ref, computed, onMounted } from 'vue'
 import {
   Fingerprint, Shield, Search, CheckCircle, AlertCircle,
   Plus, MapPin, Sprout, Package, ClipboardList, BarChart3,
-  QrCode, ScanLine, Upload
+  QrCode, ScanLine, Upload, ExternalLink
 } from 'lucide-vue-next'
 import PageHeader from '@/components/shared/PageHeader.vue'
 import * as traceApi from '@/apis/trace_api'
@@ -908,6 +912,11 @@ async function handleDeletePhoto(photoId) {
   }
 }
 
+// 打开消费者查询页
+function openConsumerPage() {
+  window.open('/trace-query', '_blank')
+}
+
 // 溯源查询
 async function handleQuery() {
   if (!queryCode.value.trim()) return
@@ -1126,6 +1135,26 @@ onMounted(async () => {
   font-size: 14px;
   font-weight: 650;
   color: var(--gray-1000);
+}
+
+.consumer-link-btn {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px 10px;
+  border: 1px solid var(--gray-200);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--gray-600);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .2s;
+  &:hover {
+    border-color: var(--main-400);
+    color: var(--main-700);
+    background: var(--main-50);
+  }
 }
 
 .blockchain-info {

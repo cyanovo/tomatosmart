@@ -292,6 +292,10 @@ async def trace_by_batch_code(batch_code: str):
         "harvest_grade": batch.harvests[-1].get("grade") if batch.harvests else None,
         "harvest_yield_kg": batch.harvests[-1].get("yield_kg") if batch.harvests else None,
         "activities_summary": activities_summary,
+        "activities_detail": [
+            {"type": a.get("type"), "datetime": a.get("datetime"), "detail": a.get("detail"), "materials": a.get("materials")}
+            for a in batch.activities
+        ],
         "environment_summary": env_summary,
         "inspections": [{"type": i.get("inspection_type"), "result": i.get("result"), "lab": i.get("lab_name")} for i in batch.inspections],
         "package_info": {

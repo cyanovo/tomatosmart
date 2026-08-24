@@ -55,7 +55,6 @@ if ($mirrorTag) {
 
         if ($mirrorTag -ne $ImageTag) {
             docker tag $mirrorTag $ImageTag
-            docker rmi $mirrorTag | Out-Null
         }
 
         Write-Host "Successfully pulled via China mirror: $ImageTag" -ForegroundColor Green

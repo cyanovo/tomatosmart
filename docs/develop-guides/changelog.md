@@ -22,6 +22,7 @@
 - 调整课堂私有仓库部署流程：仓库内置课堂 `.env`，初始化脚本自动生成本机 JWT 与实例 ID，并预下载公开依赖镜像，学生仅需构建项目自身镜像。
 - 新增 Windows 初始化批处理入口：`scripts/init.bat` 使用临时 `ExecutionPolicy Bypass` 调用 PowerShell 初始化脚本，避免学生电脑因脚本执行策略无法运行初始化命令。
 - 增强镜像预拉取脚本：区分已在国内 registry 的镜像与 Docker Hub/GHCR/Quay 镜像，优先使用 DaoCloud 国内镜像前缀，失败时自动回退原始镜像地址，避免单个加速源异常导致初始化中断。
+- 将 Compose 与 Dockerfile 默认镜像切换为国内镜像地址：公开运行依赖和构建基础镜像默认使用 DaoCloud 前缀，项目自建镜像设置 `pull_policy: build`，避免学生直接 `docker compose up` 时访问 Docker Hub。
 - 替换默认登录页背景：将旧草莓背景替换为番茄温室图片，并同步默认站点配置。
 - 新增消费者溯源查询页：在溯源管理页添加"消费者查询页"按钮，打开独立公开路由 `/trace-query`（无需登录），消费者可输入溯源码查询完整溯源报告，支持摄像头扫码识别包装上的二维码；页面自适应 PC 和移动端。
 - 调整智能体上下文摘要触发阈值默认值：`summary_threshold` 从 100K 提升至 800K，以适配大上下文窗口模型（如 Gemini 2.5 Pro 1M）；管理员可通过 UI 智能体配置页按代理覆盖。

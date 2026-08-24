@@ -48,7 +48,6 @@ if [ -n "$MIRROR_TAG" ]; then
     if pull_image "$MIRROR_TAG"; then
         if [ "$MIRROR_TAG" != "$IMAGE_TAG" ]; then
             docker tag "$MIRROR_TAG" "$IMAGE_TAG"
-            docker rmi "$MIRROR_TAG" >/dev/null || true
         fi
         echo "Successfully pulled via China mirror: $IMAGE_TAG"
         exit 0

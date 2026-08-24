@@ -52,7 +52,7 @@ chmod +x scripts/init.sh
 docker compose up -d --build
 ```
 
-首次启动仍需要构建本项目自己的 `greenhouse-api`、`greenhouse-web` 和 `greenhouse-sandbox-provisioner` 镜像，但公开基础镜像会在上一步优先下载好。启动完成后查看状态：
+首次启动仍需要构建本项目自己的 `greenhouse-api`、`greenhouse-web` 和 `greenhouse-sandbox-provisioner` 镜像。Compose 文件中的公开依赖镜像已经默认改为国内镜像地址，公开基础镜像也会在上一步优先下载好。启动完成后查看状态：
 
 ```bash
 docker compose ps
@@ -267,6 +267,8 @@ ifconfig | grep "inet"
 首次部署会下载多个大镜像并构建后端镜像，属于正常情况。大陆网络建议先运行初始化脚本预拉镜像，并尽量使用稳定网络。
 
 如果初始化阶段只有部分镜像下载成功，可以直接重新运行 `.\scripts\init.bat`。Docker 会复用已经下载成功的层，不会从零开始。
+
+如果学生直接运行 `docker compose up`，项目也会优先使用 Compose 文件中配置的国内镜像地址，不会先访问 Docker Hub 拉取 Milvus、Postgres、Redis 等公开依赖镜像。
 
 ### 服务没有全部 healthy
 

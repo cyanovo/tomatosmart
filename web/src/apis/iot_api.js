@@ -15,7 +15,7 @@ export function fetchSoilSensor() {
   return apiGet('/api/iot/sensors/soil')
 }
 
-/** 控制执行器：key = irrigation | pump | mist | ventilation */
+/** 控制执行器：key = irrigation | pump */
 export function setActuator(key, value) {
   return apiPost(`/api/iot/actuators/${key}?value=${value}`)
 }
@@ -25,7 +25,31 @@ export function controlLed(ledCommand) {
   return apiPost('/api/iot/actuators/led', ledCommand)
 }
 
-/** 设置工作模式 mode=auto(自主) / mode=ai(AI)，互斥 */
+/** 设置工作模式 mode=manual(手动) / mode=ai(AI)，后端兼容旧 auto */
 export function setMode(mode) {
   return apiPost(`/api/iot/mode?mode=${mode}`)
+}
+
+export function setRedBrightness(value) {
+  return apiPost(`/api/iot/light/red?value=${value}`)
+}
+
+export function setBlueBrightness(value) {
+  return apiPost(`/api/iot/light/blue?value=${value}`)
+}
+
+export function setFillLightMode(value) {
+  return apiPost(`/api/iot/light/mode?value=${value}`)
+}
+
+export function setPumpInterval(value) {
+  return apiPost(`/api/iot/pump/interval?value=${value}`)
+}
+
+export function setPumpDuration(value) {
+  return apiPost(`/api/iot/pump/duration?value=${value}`)
+}
+
+export function setRestSchedule(schedule) {
+  return apiPost('/api/iot/rest-schedule', schedule)
 }

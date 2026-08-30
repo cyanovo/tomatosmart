@@ -1,4 +1,5 @@
 # 番茄温室智能管控平台
+docker compose up -d --pull never --no-build
 
 本项目是一个面向番茄温室的智能管控平台，集成了 AI 智能体、知识库 RAG、物联网 MQTT、番茄成熟度检测、采收调度和产品溯源能力。
 
@@ -234,7 +235,7 @@ Newsmart-Strawberry/
 ### 配网步骤
 
 1. 给 ESP32 上电。
-2. 手机连接热点 `A-strawberry`，密码 `12345678`。
+2. 手机连接热点 `A-tomato`，密码以设备配网页面或硬件说明为准。
 3. 浏览器打开 `http://192.168.4.1`。
 4. 填写 WiFi 和 MQTT 配置。
 5. 保存并重启 ESP32。
@@ -253,12 +254,29 @@ ifconfig | grep "inet"
 
 ### MQTT Topic
 
-| Topic | 方向 | 说明 |
+默认 MQTT 根主题为 `tomato_hnsw0001`，可通过 `.env` 中的 `MQTT_TOPIC_ROOT` 调整。
+
+| Topic | 方向 | QoS | Retain | 说明 |
+| --- | --- | --- | --- | --- |
+| `tomato_hnsw0001/set` | 服务器到 ESP32 | 1 | 否 | 控制命令，payload 为 `{"request_id":"server-001","cmd":"03","data":{"value":1}}` |
+| `tomato_hnsw0001/result` | ESP32 到服务器 | 1 | 否 | 单条控制命令执行结果 |
+| `tomato_hnsw0001/state` | ESP32 到服务器 | 1 | 是 | 当前控制状态快照 |
+| `tomato_hnsw0001/telemetry` | ESP32 到服务器 | 0 | 否 | 真实传感器数据，每 10 秒一次 |
+| `tomato_hnsw0001/availability` | ESP32 到服务器 | 1 | 是 | 设备 online/offline 状态 |
+
+当前后端已支持的控制命令：
+
+| cmd | data | 说明 |
 | --- | --- | --- |
-| `/air/post` | ESP32 到服务器 | 空气传感器数据 |
-| `/soil/post` | ESP32 到服务器 | 土壤传感器数据 |
-| `strawberry_irrigation` | 服务器到 ESP32 | 灌溉控制指令 |
-| `strawberry_fan` | 服务器到 ESP32 | 风扇控制指令 |
+| `01` | `{"value":0-100}` | 设置红光亮度，仅手动模式有效 |
+| `02` | `{"value":0-100}` | 设置蓝光亮度，仅手动模式有效 |
+| `03` | `{"value":0/1}` | 水泵开关 |
+| `04` | `{"value":0/1}` | 总灯开关 |
+| `05` | `{"value":1-5}` | 选择番茄补光模式 |
+| `06` | `{"value":0-65535}` | 水泵工作间隔，单位分钟 |
+| `07` | `{"value":0-65535}` | 水泵单次工作时长，单位秒 |
+| `08` | `{"value":0/1}` | 工作模式，0 为手动，1 为 AI 智控 |
+| `09` | `{"start_hour":20,"start_minute":0,"end_hour":7,"end_minute":0}` | 设置休息开始和结束时间 |
 
 ## 常见问题
 

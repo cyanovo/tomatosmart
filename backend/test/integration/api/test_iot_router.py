@@ -51,12 +51,8 @@ async def test_actuator_invalid_key():
 
 
 @pytest.mark.asyncio
-async def test_actuator_mist():
-    """mist 和 ventilation 仅更新状态，不依赖 MQTT 连接"""
+async def test_actuator_mist_unsupported():
+    """v1.1 协议未定义 mist 控制命令"""
     async with AsyncClient(transport=ASGITransport(app=app), base_url="http://test") as ac:
         resp = await ac.post("/api/iot/actuators/mist?value=true")
-    assert resp.status_code == 200
-    data = resp.json()
-    assert data["ok"] is True
-    assert data["key"] == "mist"
-    assert data["value"] is True
+    assert resp.status_code == 503

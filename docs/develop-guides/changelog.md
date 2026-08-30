@@ -18,6 +18,7 @@
 
 ### 开发记录
 
+- 更新番茄种植架 MQTT 通信协议至 v1.1：后端订阅 `tomato_hnsw0001/result/state/telemetry/availability`，控制指令统一发布到 `tomato_hnsw0001/set` 并使用 `cmd` 编号；补齐红/蓝光亮度、总灯开关、补光模式、水泵间隔/时长、休息时间和手动/AI 模式命令，前端 IoT 页面、智能体工具、README 与 ESP32 示例脚本同步切换到新版 telemetry/state 字段。
 - 优化学生首次部署体验：README 改为快速部署优先结构，补充中国大陆镜像源说明；初始化脚本补充 Mosquitto 预拉取，后端与沙盒镜像构建阶段保留国内 Python 包源，减少大陆网络下首次构建卡顿。
 - 调整课堂私有仓库部署流程：仓库内置课堂 `.env`，初始化脚本自动生成本机 JWT 与实例 ID，并预下载公开依赖镜像，学生仅需构建项目自身镜像。
 - 新增 Windows 初始化批处理入口：`scripts/init.bat` 使用临时 `ExecutionPolicy Bypass` 调用 PowerShell 初始化脚本，避免学生电脑因脚本执行策略无法运行初始化命令。

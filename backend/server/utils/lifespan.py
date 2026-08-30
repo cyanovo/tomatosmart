@@ -102,6 +102,7 @@ async def lifespan(app: FastAPI):
         try:
             mqtt_client.register_air_handler(iot_service.on_air_data)
             mqtt_client.register_soil_handler(iot_service.on_soil_data)
+            mqtt_client.register_state_handler(iot_service.on_state_data)
             mqtt_client.connect()
             logger.info("MQTT IoT client started")
         except Exception as e:

@@ -19,8 +19,8 @@
         <div class="mode-panel">
           <div class="mode-item">
             <div>
-              <span class="mode-title">自主模式</span>
-              <span class="mode-desc">按预设阈值自动联动执行器</span>
+              <span class="mode-title">手动模式</span>
+              <span class="mode-desc">允许直接控制水泵与补光设备</span>
             </div>
             <a-switch v-model:checked="autonomousMode" @change="toggleAutoMode" />
           </div>
@@ -92,6 +92,73 @@
         </div>
       </section>
 
+      <!-- 灯光控制 -->
+      <section class="light-section">
+        <div class="section-heading">
+          <Lightbulb :size="18" />
+          <h3>补光灯控制</h3>
+        </div>
+
+        <div class="light-top-row">
+          <div class="light-switch-card">
+            <div class="actuator-info">
+              <Lightbulb :size="20" />
+              <div>
+                <span class="actuator-title">补光灯总开关</span>
+                <span class="actuator-desc">关闭后红光、蓝光亮度归零</span>
+              </div>
+            </div>
+            <a-switch
+              :checked="lightState.master"
+              :loading="lightPending.master"
+              @change="toggleLightMaster"
+            />
+          </div>
+
+          <div class="light-mode-card">
+            <span class="actuator-title">补光模式</span>
+            <span class="actuator-desc">选择预设补光方案（1-5）</span>
+            <a-select
+              v-model:value="lightState.fillMode"
+              :options="fillModeOptions"
+              size="small"
+              style="width: 120px; margin-top: 8px;"
+              @change="handleFillModeChange"
+            />
+          </div>
+        </div>
+
+        <div class="light-slider-row">
+          <div class="light-slider-card">
+            <div class="slider-header">
+              <span class="slider-label">红光亮度</span>
+              <span class="slider-value">{{ lightState.red }}%</span>
+            </div>
+            <a-slider
+              v-model:value="lightState.red"
+              :min="0"
+              :max="100"
+              :disabled="!lightState.master || lightPending.red"
+              @after-change="handleRedChange"
+            />
+          </div>
+
+          <div class="light-slider-card">
+            <div class="slider-header">
+              <span class="slider-label">蓝光亮度</span>
+              <span class="slider-value">{{ lightState.blue }}%</span>
+            </div>
+            <a-slider
+              v-model:value="lightState.blue"
+              :min="0"
+              :max="100"
+              :disabled="!lightState.master || lightPending.blue"
+              @after-change="handleBlueChange"
+            />
+          </div>
+        </div>
+      </section>
+
       <!-- AI 控制建议（AI 模式开启时显示） -->
       <section v-if="aiMode" class="ai-panel">
         <div class="section-heading">
@@ -122,21 +189,20 @@ import {
   RefreshCw,
   FlaskConical,
   Gauge,
-  Leaf,
+  Lightbulb,
   Power,
   Sun,
   Thermometer,
   Waves,
-  Wind
 } from 'lucide-vue-next'
 import PageHeader from '@/components/shared/PageHeader.vue'
 import PageAgentDropdown from '@/components/PageAgentDropdown.vue'
-import { fetchIotDashboard, setActuator, setMode } from '@/apis/iot_api'
+import { fetchIotDashboard, setActuator, setMode, setRedBrightness, setBlueBrightness, setFillLightMode } from '@/apis/iot_api'
 import { message } from 'ant-design-vue'
 
 // ---- 模式开关 ----
-// 自主模式 ON  → 执行器锁死，只能看不能操作（设备端自动控制）
-// 自主模式 OFF → 执行器解锁，用户可手动开关
+// 手动模式 ON → 可直接控制水泵与补光设备
+// AI 模式 ON   → 设备端会拒绝直接灯光/水泵控制
 const autonomousMode = ref(true)
 const aiMode = ref(false)
 const mqttConnected = ref(false)
@@ -153,6 +219,20 @@ const actuatorState = ref({
   pump: true
 })
 
+// ---- 灯光状态 ----
+const lightState = ref({ master: false, red: 0, blue: 0, fillMode: 1 })
+// 记录关灯前亮度，开灯时恢复
+let savedRed = 0
+let savedBlue = 0
+const lightPending = ref({ master: false, red: false, blue: false })
+const fillModeOptions = [
+  { value: 1, label: '模式 1' },
+  { value: 2, label: '模式 2' },
+  { value: 3, label: '模式 3' },
+  { value: 4, label: '模式 4' },
+  { value: 5, label: '模式 5' },
+]
+
 // ---- 轮询 ----
 let pollTimer = null
 const POLL_INTERVAL_MS = 5000
@@ -161,7 +241,6 @@ const POLL_INTERVAL_MS = 5000
 const airMetrics = computed(() => {
   const a = airData.value
   return [
-    { label: '二氧化碳浓度', value: a ? `${a.co2} ppm` : '--', range: '目标 500-900 ppm', icon: Gauge },
     { label: '光照强度', value: a ? `${a.illumination.toLocaleString()} lx` : '--', range: '目标 15,000-25,000 lx', icon: Sun },
     { label: '温度', value: a ? `${a.temp} °C` : '--', range: '目标 22-28 °C', icon: Thermometer },
     { label: '湿度', value: a ? `${a.humidity}%` : '--', range: '目标 60-75%', icon: Droplets }
@@ -171,18 +250,14 @@ const airMetrics = computed(() => {
 const hydroponicMetrics = computed(() => {
   const s = soilData.value
   return [
-    { label: '氮', value: s ? `${s.nitrogen} mg/L` : '--', range: '营养元素 N', icon: Leaf },
-    { label: '磷', value: s ? `${s.phosphorus} mg/L` : '--', range: '营养元素 P', icon: Leaf },
-    { label: '钾', value: s ? `${s.potassium} mg/L` : '--', range: '营养元素 K', icon: Leaf },
     { label: 'pH 值', value: s ? `${s.ph_value}` : '--', range: '目标 5.8-6.5', icon: FlaskConical },
-    { label: 'EC 值', value: s ? `${(s.soil_conductivity / 1000).toFixed(1)} mS/cm` : '--', range: '目标 1.4-2.2 mS/cm', icon: Gauge },
-    { label: '水温', value: s ? `${s.soil_temperature} °C` : '--', range: '目标 20-24 °C', icon: Thermometer }
+    { label: 'EC 值', value: s ? `${s.soil_conductivity} μS/cm` : '--', range: '按设备 telemetry 回传', icon: Gauge },
+    { label: '水温', value: s ? `${s.soil_temperature} °C` : '--', range: '目标 20-24 °C', icon: Thermometer },
+    { label: '水箱水位', value: s ? `${s.water_tank_level} cm` : '--', range: '水箱液位', icon: Waves }
   ]
 })
 
 const actuators = [
-  { key: 'mist', name: '水雾培开关', desc: '控制雾化供液与根区湿润', icon: Waves },
-  { key: 'ventilation', name: '通风开关', desc: '控制风机换气与温湿度平衡', icon: Wind },
   { key: 'pump', name: '水泵开关', desc: '控制营养液循环供给', icon: Power }
 ]
 
@@ -201,6 +276,17 @@ async function loadDashboard() {
       actuatorState.value.pump = a.pump
       autonomousMode.value = a.auto_mode
       aiMode.value = a.ai_mode
+      // 同步灯光状态（仅在非用户操作期间更新）
+      if (!lightPending.value.master) {
+        lightState.value.master = a.light_master_state ?? false
+      }
+      if (!lightPending.value.red) {
+        lightState.value.red = a.red_brightness ?? 0
+      }
+      if (!lightPending.value.blue) {
+        lightState.value.blue = a.blue_brightness ?? 0
+      }
+      lightState.value.fillMode = a.fill_light_mode ?? 1
     }
   } catch (e) {
     if (e.response?.status === 404) {
@@ -237,7 +323,7 @@ async function toggleAutoMode(val) {
   const oldAi = aiMode.value
   aiMode.value = false
   try {
-    await setMode('auto')
+    await setMode('manual')
   } catch {
     autonomousMode.value = false
     aiMode.value = oldAi
@@ -262,6 +348,65 @@ async function toggleAiMode(val) {
     autonomousMode.value = oldAuto
     if (aiTimer) { clearInterval(aiTimer); aiTimer = null }
     message.error('模式切换失败，请检查 MQTT 连接')
+  }
+}
+
+// ---- 灯光控制 ----
+async function toggleLightMaster(checked) {
+  lightPending.value.master = true
+  try {
+    if (checked) {
+      // 开灯 → 恢复之前的亮度
+      const redVal = savedRed > 0 ? savedRed : 50
+      const blueVal = savedBlue > 0 ? savedBlue : 50
+      await setRedBrightness(redVal)
+      await setBlueBrightness(blueVal)
+      lightState.value.red = redVal
+      lightState.value.blue = blueVal
+    } else {
+      // 关灯 → 记住当前亮度，然后归零
+      savedRed = lightState.value.red
+      savedBlue = lightState.value.blue
+      await setRedBrightness(0)
+      await setBlueBrightness(0)
+      lightState.value.red = 0
+      lightState.value.blue = 0
+    }
+    lightState.value.master = checked
+  } catch {
+    message.error('灯光控制失败，请检查 MQTT 连接')
+  } finally {
+    lightPending.value.master = false
+  }
+}
+
+async function handleRedChange(val) {
+  lightPending.value.red = true
+  try {
+    await setRedBrightness(val)
+  } catch {
+    message.error('红光亮度设置失败')
+  } finally {
+    lightPending.value.red = false
+  }
+}
+
+async function handleBlueChange(val) {
+  lightPending.value.blue = true
+  try {
+    await setBlueBrightness(val)
+  } catch {
+    message.error('蓝光亮度设置失败')
+  } finally {
+    lightPending.value.blue = false
+  }
+}
+
+async function handleFillModeChange(val) {
+  try {
+    await setFillLightMode(val)
+  } catch {
+    message.error('补光模式设置失败')
   }
 }
 
@@ -293,8 +438,8 @@ async function runAiAnalysis() {
     }
 
     const a = airData.value; const s = soilData.value
-    const query = `温室实时数据：温度${a?.temp || '?'}°C，湿度${a?.humidity || '?'}%，CO2 ${a?.co2 || '?'}ppm，光照${a?.illumination || '?'}lx，pH ${s?.ph_value || '?'}，EC ${s ? (s.soil_conductivity/1000).toFixed(1) : '?'}mS/cm。适宜：22-28°C/60-75%/500-900ppm/5.8-6.5/1.4-2.2。
-直接用 control_actuator 调整异常设备（无需确认），调整后一句话报告结果。格式：每行一个操作，如「已开通风：温度28.5偏高」`
+    const query = `温室实时数据：温度${a?.temp || '?'}°C，湿度${a?.humidity || '?'}%，光照${a?.illumination || '?'}lx，水温${s?.soil_temperature || '?'}°C，水箱水位${s?.water_tank_level || '?'}cm，pH ${s?.ph_value || '?'}，EC ${s?.soil_conductivity || '?'}μS/cm。适宜：22-28°C/60-75%/5.8-6.5。
+直接用 control_actuator 调整异常设备（无需确认），调整后一句话报告结果。格式：每行一个操作，如「已开启水泵：水位偏低」`
 
     aiAnalysis.value = '⚙️ AI 正在分析和执行...'
     const runRes = await agentApi.createAgentRun({ query, agent_id: agentId, thread_id: aiThreadId.value, meta: {} })
@@ -384,7 +529,8 @@ onBeforeUnmount(() => {
 
 .overview-band,
 .monitor-section,
-.actuator-section {
+.actuator-section,
+.light-section {
   border: 1px solid var(--gray-150);
   border-radius: 8px;
   background: var(--gray-0);
@@ -464,7 +610,8 @@ onBeforeUnmount(() => {
 }
 
 .monitor-section,
-.actuator-section {
+.actuator-section,
+.light-section {
   padding: 18px;
 }
 
@@ -556,7 +703,73 @@ onBeforeUnmount(() => {
   color: var(--main-color);
 }
 
+/* ---- 灯光控制 ---- */
+.light-top-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin-bottom: 14px;
+}
+
+.light-switch-card {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  min-height: 82px;
+  padding: 14px;
+  border: 1px solid var(--gray-150);
+  border-radius: 8px;
+  background: var(--gray-10);
+}
+
+.light-mode-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 14px;
+  border: 1px solid var(--gray-150);
+  border-radius: 8px;
+  background: var(--gray-10);
+}
+
+.light-slider-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+
+.light-slider-card {
+  padding: 14px;
+  border: 1px solid var(--gray-150);
+  border-radius: 8px;
+  background: var(--gray-10);
+}
+
+.slider-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.slider-label {
+  color: var(--gray-1000);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.slider-value {
+  color: var(--main-color);
+  font-size: 14px;
+  font-weight: 600;
+}
+
 @media (max-width: 1180px) {
+  .light-top-row,
+  .light-slider-row {
+    grid-template-columns: 1fr;
+  }
   .overview-band,
   .metrics-grid,
   .actuator-grid {

@@ -1,7 +1,7 @@
 import json
 from unittest.mock import patch
 
-from yuxi.iot.schemas import AirSensorData, SoilSensorData, IrrigationCommand, LedCommand
+from yuxi.iot.schemas import AirSensorData, SoilSensorData, MqttSetCommand, LedCommand
 from yuxi.iot.mqtt_client import MqttClient
 
 
@@ -19,36 +19,88 @@ class TestMqttClient:
 
     def test_air_sensor_parsing(self):
         """验证空气传感器数据字段校验与别名映射"""
-        payload = {"humidity": 45.5, "temp": 25.3, "co2": 450, "Illumination": 12000}
+        payload = {"air_humidity": 45.5, "air_temperature": 25.3, "light_intensity": 12000}
         data = AirSensorData(**payload)
         assert data.humidity == 45.5
         assert data.temp == 25.3
-        assert data.co2 == 450
-        assert data.illumination == 12000  # 别名 Illumination -> illumination
+        assert data.co2 == 0
+        assert data.illumination == 12000
 
     def test_soil_sensor_parsing(self):
-        """验证土壤传感器全字段解析"""
+        """验证水培传感器字段解析"""
         payload = {
-            "soil_moisture": 65.5,
-            "soil_temperature": 23.8,
-            "soil_conductivity": 1200,
-            "ph_value": 6.8,
-            "nitrogen": 120,
-            "phosphorus": 80,
-            "potassium": 200,
+            "hydroponic_temperature": 23.8,
+            "water_tank_level": 10.4,
+            "ph": 6.8,
+            "ec": 1200,
         }
         data = SoilSensorData(**payload)
         assert data.ph_value == 6.8
-        assert data.nitrogen == 120
-        assert data.potassium == 200
+        assert data.soil_temperature == 23.8
+        assert data.water_tank_level == 10.4
+        assert data.soil_conductivity == 1200
 
-    def test_irrigation_command_start(self):
-        cmd = IrrigationCommand(action="start")
-        assert json.loads(cmd.model_dump_json()) == {"action": "start"}
+    def test_mqtt_set_command(self):
+        cmd = MqttSetCommand(request_id="phone-001", cmd="05", data={"value": 3})
+        assert json.loads(cmd.model_dump_json()) == {
+            "request_id": "phone-001",
+            "cmd": "05",
+            "data": {"value": 3},
+        }
 
-    def test_irrigation_command_stop(self):
-        cmd = IrrigationCommand(action="stop")
-        assert json.loads(cmd.model_dump_json()) == {"action": "stop"}
+    def test_publish_pump_command(self):
+        class FakeClient:
+            def __init__(self):
+                self.messages = []
+
+            def is_connected(self):
+                return True
+
+            def publish(self, topic, payload, qos=0):
+                self.messages.append((topic, json.loads(payload), qos))
+
+        client = MqttClient()
+        fake = FakeClient()
+        client._client = fake
+
+        assert client.publish_pump(True) is True
+        topic, payload, qos = fake.messages[0]
+        assert topic == "tomato_hnsw0001/set"
+        assert payload["cmd"] == "03"
+        assert payload["data"] == {"value": 1}
+        assert qos == 1
+
+    def test_publish_v11_parameter_commands(self):
+        class FakeClient:
+            def __init__(self):
+                self.messages = []
+
+            def is_connected(self):
+                return True
+
+            def publish(self, topic, payload, qos=0):
+                self.messages.append((topic, json.loads(payload), qos))
+
+        client = MqttClient()
+        fake = FakeClient()
+        client._client = fake
+
+        assert client.publish_red_brightness(80) is True
+        assert client.publish_blue_brightness(60) is True
+        assert client.publish_fill_light_mode(3) is True
+        assert client.publish_pump_interval(30) is True
+        assert client.publish_pump_duration(20) is True
+        assert client.publish_rest_schedule(20, 12, 7, 22) is True
+
+        commands = [(payload["cmd"], payload["data"]) for _, payload, _ in fake.messages]
+        assert commands == [
+            ("01", {"value": 80}),
+            ("02", {"value": 60}),
+            ("05", {"value": 3}),
+            ("06", {"value": 30}),
+            ("07", {"value": 20}),
+            ("09", {"start_hour": 20, "start_minute": 12, "end_hour": 7, "end_minute": 22}),
+        ]
 
     def test_led_single_channel(self):
         """LED 指令只包含指定通道"""

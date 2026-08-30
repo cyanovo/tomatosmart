@@ -4,9 +4,10 @@ import asyncio
 import json
 import os
 import time
+from uuid import uuid4
 from typing import Callable, Awaitable, TYPE_CHECKING
 
-from yuxi.iot.schemas import AirSensorData, SoilSensorData, IrrigationCommand
+from yuxi.iot.schemas import ActuatorStatus, AirSensorData, SoilSensorData, IrrigationCommand, MqttSetCommand
 from yuxi.utils import logger
 
 if TYPE_CHECKING:
@@ -18,13 +19,17 @@ BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
 BROKER_USERNAME = os.environ.get("MQTT_BROKER_USERNAME", "admin")
 BROKER_PASSWORD = os.environ.get("MQTT_BROKER_PASSWORD", "admin123")
 CLIENT_ID = f"yuxi-server-{int(time.time())}"
-KEEPALIVE = 60
+KEEPALIVE = 120
 
 # 主题常量
-TOPIC_AIR = "/air/post"
-TOPIC_SOIL = "/soil/post"
-TOPIC_IRRIGATION = "strawberry_irrigation"
-TOPIC_FAN = "strawberry_fan"
+TOPIC_ROOT = os.environ.get("MQTT_TOPIC_ROOT", "tomato_hnsw0001").strip().strip("/")
+TOPIC_SET = f"{TOPIC_ROOT}/set"
+TOPIC_RESULT = f"{TOPIC_ROOT}/result"
+TOPIC_STATE = f"{TOPIC_ROOT}/state"
+TOPIC_TELEMETRY = f"{TOPIC_ROOT}/telemetry"
+TOPIC_AVAILABILITY = f"{TOPIC_ROOT}/availability"
+LEGACY_TOPIC_AIR = "/air/post"
+LEGACY_TOPIC_SOIL = "/soil/post"
 
 
 class MqttClient:
@@ -34,6 +39,7 @@ class MqttClient:
         self._client: mqtt.Client | None = None
         self._air_callback: Callable[[AirSensorData], Awaitable[None]] | None = None
         self._soil_callback: Callable[[SoilSensorData], Awaitable[None]] | None = None
+        self._state_callback: Callable[[ActuatorStatus], Awaitable[None]] | None = None
         self._enabled = os.environ.get("MQTT_ENABLED", "false").lower() in ("true", "1")
         self._event_loop = None
         self._connected = False
@@ -53,6 +59,10 @@ class MqttClient:
     def register_soil_handler(self, cb: Callable[[SoilSensorData], Awaitable[None]]):
         """注册土壤传感器数据处理回调"""
         self._soil_callback = cb
+
+    def register_state_handler(self, cb: Callable[[ActuatorStatus], Awaitable[None]]):
+        """注册设备状态快照处理回调"""
+        self._state_callback = cb
 
     # ---------- 连接管理 ----------
 
@@ -95,8 +105,16 @@ class MqttClient:
     def _on_connect(self, client, userdata, flags, reason_code, properties=None):
         if reason_code == 0:
             self._connected = True
-            client.subscribe([(TOPIC_AIR, 1), (TOPIC_SOIL, 1)])
-            logger.info(f"MQTT subscribed: {TOPIC_AIR}, {TOPIC_SOIL}")
+            topics = [
+                (TOPIC_RESULT, 1),
+                (TOPIC_STATE, 1),
+                (TOPIC_TELEMETRY, 0),
+                (TOPIC_AVAILABILITY, 1),
+                (LEGACY_TOPIC_AIR, 1),
+                (LEGACY_TOPIC_SOIL, 1),
+            ]
+            client.subscribe(topics)
+            logger.info(f"MQTT subscribed: {', '.join(topic for topic, _ in topics)}")
         else:
             self._connected = False
             logger.error(f"MQTT connection failed with code: {reason_code}")
@@ -117,16 +135,51 @@ class MqttClient:
             logger.warning(f"MQTT received invalid JSON on topic {msg.topic}: {msg.payload[:200]}")
             return
 
-        if msg.topic == TOPIC_AIR and self._air_callback:
+        if msg.topic == TOPIC_TELEMETRY:
+            asyncio.run_coroutine_threadsafe(self._handle_telemetry(payload), self._event_loop)
+        elif msg.topic == TOPIC_STATE and self._state_callback:
+            asyncio.run_coroutine_threadsafe(self._handle_state(payload), self._event_loop)
+        elif msg.topic == TOPIC_RESULT:
+            logger.info(f"MQTT command result: {payload}")
+        elif msg.topic == TOPIC_AVAILABILITY:
+            logger.info(f"MQTT device availability: {payload}")
+        elif msg.topic == LEGACY_TOPIC_AIR and self._air_callback:
             asyncio.run_coroutine_threadsafe(self._handle_air(payload), self._event_loop)
-        elif msg.topic == TOPIC_SOIL and self._soil_callback:
+        elif msg.topic == LEGACY_TOPIC_SOIL and self._soil_callback:
             asyncio.run_coroutine_threadsafe(self._handle_soil(payload), self._event_loop)
-        elif msg.topic not in (TOPIC_AIR, TOPIC_SOIL):
-            logger.warning(f"MQTT message on unsubscribed topic: {msg.topic} (expected: {TOPIC_AIR}, {TOPIC_SOIL})")
-        elif msg.topic == TOPIC_AIR and not self._air_callback:
-            logger.warning("MQTT air data received but no callback registered — data dropped")
-        elif msg.topic == TOPIC_SOIL and not self._soil_callback:
-            logger.warning("MQTT soil data received but no callback registered — data dropped")
+        else:
+            logger.debug(f"MQTT message ignored on topic: {msg.topic}")
+
+    async def _handle_telemetry(self, payload: dict):
+        try:
+            air_data = AirSensorData(**payload)
+            soil_data = SoilSensorData(**payload)
+            if self._air_callback:
+                await self._air_callback(air_data)
+            if self._soil_callback:
+                await self._soil_callback(soil_data)
+        except Exception as e:
+            logger.error(f"Failed to handle telemetry data: {e}")
+
+    async def _handle_state(self, payload: dict):
+        try:
+            data = ActuatorStatus(
+                pump=bool(payload.get("pump_state", False)),
+                irrigation=bool(payload.get("pump_state", False)),
+                ai_mode=payload.get("control_mode") == 1,
+                auto_mode=payload.get("control_mode") == 0,
+                red_brightness=int(payload.get("red_brightness", 0)),
+                blue_brightness=int(payload.get("blue_brightness", 0)),
+                light_master_state=bool(payload.get("light_master_state", False)),
+                fill_light_mode=payload.get("fill_light_mode"),
+                pump_interval_min=payload.get("pump_interval_min"),
+                pump_duration_sec=payload.get("pump_duration_sec"),
+                rest_schedule=payload.get("rest_schedule"),
+            )
+            if self._state_callback:
+                await self._state_callback(data)
+        except Exception as e:
+            logger.error(f"Failed to handle state data: {e}")
 
     async def _handle_air(self, payload: dict):
         try:
@@ -147,31 +200,64 @@ class MqttClient:
     # ---------- 发布（控制指令）----------
 
     def publish_irrigation(self, cmd: IrrigationCommand) -> bool:
-        if not self._client or not self._client.is_connected():
-            logger.warning("MQTT not connected, cannot publish irrigation command")
-            return False
-        self._client.publish(TOPIC_IRRIGATION, cmd.model_dump_json())
-        logger.info(f"Published irrigation command: {cmd.action}")
-        return True
+        return self.publish_pump(cmd.action == "start")
 
-    def _publish_fan(self, payload: dict) -> bool:
-        """统一通过 tomato_fan 发布"""
+    def publish_set_command(self, cmd: str, data: dict, request_id: str | None = None) -> bool:
         if not self._client or not self._client.is_connected():
-            logger.warning("MQTT not connected, cannot publish to tomato_fan")
+            logger.warning(f"MQTT not connected, cannot publish command {cmd}")
             return False
-        data = json.dumps(payload)
-        self._client.publish(TOPIC_FAN, data)
-        logger.info(f"Published to {TOPIC_FAN}: {data}")
+        command = MqttSetCommand(
+            request_id=request_id or f"server-{int(time.time())}-{uuid4().hex[:8]}",
+            cmd=cmd,
+            data=data,
+        )
+        payload = command.model_dump_json()
+        self._client.publish(TOPIC_SET, payload, qos=1)
+        logger.info(f"Published to {TOPIC_SET}: {payload}")
         return True
 
     def publish_ventilation(self, action: str) -> bool:
-        return self._publish_fan({"fan": action})
+        logger.warning("Ventilation command is not defined in MQTT protocol v1.1")
+        return False
 
     def publish_mist(self, action: str) -> bool:
-        return self._publish_fan({"water": action})
+        logger.warning("Mist command is not defined in MQTT protocol v1.1")
+        return False
+
+    def publish_pump(self, enabled: bool) -> bool:
+        return self.publish_set_command("03", {"value": 1 if enabled else 0})
+
+    def publish_light_master(self, enabled: bool) -> bool:
+        return self.publish_set_command("04", {"value": 1 if enabled else 0})
+
+    def publish_red_brightness(self, value: int) -> bool:
+        return self.publish_set_command("01", {"value": value})
+
+    def publish_blue_brightness(self, value: int) -> bool:
+        return self.publish_set_command("02", {"value": value})
+
+    def publish_fill_light_mode(self, value: int) -> bool:
+        return self.publish_set_command("05", {"value": value})
+
+    def publish_pump_interval(self, minutes: int) -> bool:
+        return self.publish_set_command("06", {"value": minutes})
+
+    def publish_pump_duration(self, seconds: int) -> bool:
+        return self.publish_set_command("07", {"value": seconds})
+
+    def publish_rest_schedule(self, start_hour: int, start_minute: int, end_hour: int, end_minute: int) -> bool:
+        return self.publish_set_command(
+            "09",
+            {
+                "start_hour": start_hour,
+                "start_minute": start_minute,
+                "end_hour": end_hour,
+                "end_minute": end_minute,
+            },
+        )
 
     def publish_mode(self, mode: str) -> bool:
-        return self._publish_fan({"mode": mode})
+        return self.publish_set_command("08", {"value": 1 if mode == "ai" else 0})
 
 
 # 模块级单例

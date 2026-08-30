@@ -40,7 +40,12 @@ class IotService:
     async def on_soil_data(self, data: SoilSensorData):
         await self._ensure_redis()
         await self._redis.set(self.KEY_SOIL, data.model_dump_json())
-        logger.debug(f"Soil sensor data updated: {data.soil_moisture}%")
+        logger.debug(f"Hydroponic sensor data updated: ph={data.ph_value}, ec={data.soil_conductivity}")
+
+    async def on_state_data(self, data: ActuatorStatus):
+        await self._ensure_redis()
+        await self._redis.set(self.KEY_ACTUATORS, data.model_dump_json())
+        logger.debug(f"IoT actuator state updated: {data.model_dump_json()}")
 
     # ---------- 数据查询 ----------
 
@@ -120,15 +125,11 @@ class IotService:
                 else:
                     return await self.stop_irrigation()
             case "mist":
-                ok = mqtt_client.publish_mist("on" if value else "off")
-                if ok:
-                    await self._update_actuator(key, value)
-                return ok
+                logger.warning("mist is not defined in MQTT protocol v1.1")
+                return False
             case "ventilation":
-                ok = mqtt_client.publish_ventilation("on" if value else "off")
-                if ok:
-                    await self._update_actuator(key, value)
-                return ok
+                logger.warning("ventilation is not defined in MQTT protocol v1.1")
+                return False
             case _:
                 logger.warning(f"Unknown actuator key: {key}")
                 return False
@@ -137,12 +138,87 @@ class IotService:
 
     async def set_mode(self, mode: str) -> bool:
         """设置工作模式 — AI 和自主互斥，通过 MQTT 下发到硬件"""
+        if mode == "auto":
+            mode = "manual"
         ok = mqtt_client.publish_mode(mode)
         if ok:
             current = await self.get_actuator_status()
             current.ai_mode = (mode == "ai")
-            current.auto_mode = (mode == "auto")
+            current.auto_mode = (mode == "manual")
             await self._redis.set(self.KEY_ACTUATORS, current.model_dump_json())
+        return ok
+
+    async def set_red_brightness(self, value: int) -> bool:
+        ok = mqtt_client.publish_red_brightness(value)
+        if ok:
+            status = await self.get_actuator_status()
+            status.red_brightness = value
+            status.light_master_state = value > 0 or status.blue_brightness > 0
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
+        return ok
+
+    async def set_blue_brightness(self, value: int) -> bool:
+        ok = mqtt_client.publish_blue_brightness(value)
+        if ok:
+            status = await self.get_actuator_status()
+            status.blue_brightness = value
+            status.light_master_state = status.red_brightness > 0 or value > 0
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
+        return ok
+
+    async def set_fill_light_mode(self, value: int) -> bool:
+        ok = mqtt_client.publish_fill_light_mode(value)
+        if ok:
+            status = await self.get_actuator_status()
+            status.fill_light_mode = value
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
+        return ok
+
+    async def set_pump_interval(self, minutes: int) -> bool:
+        ok = mqtt_client.publish_pump_interval(minutes)
+        if ok:
+            status = await self.get_actuator_status()
+            status.pump_interval_min = minutes
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
+        return ok
+
+    async def set_pump_duration(self, seconds: int) -> bool:
+        ok = mqtt_client.publish_pump_duration(seconds)
+        if ok:
+            status = await self.get_actuator_status()
+            status.pump_duration_sec = seconds
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
+        return ok
+
+    async def set_rest_schedule(self, start_hour: int, start_minute: int, end_hour: int, end_minute: int) -> bool:
+        ok = mqtt_client.publish_rest_schedule(start_hour, start_minute, end_hour, end_minute)
+        if ok:
+            status = await self.get_actuator_status()
+            start_minutes = start_hour * 60 + start_minute
+            end_minutes = end_hour * 60 + end_minute
+            status.rest_schedule = {
+                "start_hour": start_hour,
+                "start_minute": start_minute,
+                "end_hour": end_hour,
+                "end_minute": end_minute,
+                "crosses_midnight": end_minutes < start_minutes,
+            }
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
+        return ok
+
+    async def control_led(self, cmd: LedCommand) -> bool:
+        """控制补光灯；旧的多路 LED 接口映射到新版总灯开关。"""
+        values = [getattr(cmd, led_name, None) for led_name in ("led1", "led2", "led3", "led4", "led5")]
+        selected = [value for value in values if value is not None]
+        if not selected:
+            return False
+
+        ok = mqtt_client.publish_light_master(any(value == "on" for value in selected))
+        if ok:
+            await self._persist_led_state(cmd)
+            status = await self.get_actuator_status()
+            status.light_master_state = any(value == "on" for value in status.leds.values())
+            await self._redis.set(self.KEY_ACTUATORS, status.model_dump_json())
         return ok
 
     async def _update_actuator(self, key: str, value: bool):

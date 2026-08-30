@@ -9,10 +9,14 @@ BROKER_URL = os.environ.get("MQTT_BROKER_URL", "broker.emqx.io")
 BROKER_PORT = int(os.environ.get("MQTT_BROKER_PORT", "1883"))
 BROKER_USERNAME = os.environ.get("MQTT_BROKER_USERNAME", "admin")
 BROKER_PASSWORD = os.environ.get("MQTT_BROKER_PASSWORD", "admin123")
+TOPIC_ROOT = os.environ.get("MQTT_TOPIC_ROOT", "tomato_hnsw0001").strip().strip("/")
 
 TOPICS = [
-    ("tomato_irrigation", 1),
-    ("tomato_fan", 1),
+    (f"{TOPIC_ROOT}/set", 1),
+    (f"{TOPIC_ROOT}/result", 1),
+    (f"{TOPIC_ROOT}/state", 1),
+    (f"{TOPIC_ROOT}/telemetry", 0),
+    (f"{TOPIC_ROOT}/availability", 1),
 ]
 
 
@@ -20,8 +24,8 @@ def on_connect(client, userdata, flags, reason_code, properties=None):
     if reason_code == 0:
         client.subscribe(TOPICS)
         print(f"✅ 已连接 {BROKER_URL}:{BROKER_PORT}")
-        print("   监听: tomato_irrigation | tomato_fan")
-        print("   等待前端按钮指令...\n")
+        print(f"   监听: {TOPIC_ROOT}/set | result | state | telemetry | availability")
+        print("   等待平台和 ESP32 MQTT 消息...\n")
     else:
         print(f"❌ 连接失败: {reason_code}")
 
@@ -44,7 +48,7 @@ def main():
     client.on_connect = on_connect
     client.on_message = on_message
 
-    client.connect(BROKER_URL, BROKER_PORT, 60)
+    client.connect(BROKER_URL, BROKER_PORT, 120)
     client.loop_forever()
 
 

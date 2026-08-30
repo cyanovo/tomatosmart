@@ -185,9 +185,9 @@ async function loadAiSuggestions() {
     if (!agentStore.isInitialized) await agentStore.initialize()
 
     let env = '当前温室环境数据：\n'
-    if (a) env += `空气：温度 ${a.temp}°C，湿度 ${a.humidity}%，CO2 ${a.co2}ppm，光照 ${a.illumination}lx\n`
-    if (s) env += `土壤：pH ${s.ph_value}，EC ${(s.soil_conductivity / 1000).toFixed(1)}mS/cm，温度 ${s.soil_temperature}°C，湿度 ${s.soil_moisture}%，氮${s.nitrogen} 磷${s.phosphorus} 钾${s.potassium} mg/L\n`
-    env += `\n番茄适宜：温度22-28°C，湿度60-75%，CO2 500-900ppm，光照15000-25000lx，pH 5.8-6.5，EC 1.4-2.2mS/cm。`
+    if (a) env += `空气：温度 ${a.temp}°C，湿度 ${a.humidity}%，光照 ${a.illumination}lx\n`
+    if (s) env += `水培：pH ${s.ph_value}，EC ${s.soil_conductivity}μS/cm，水温 ${s.soil_temperature}°C，水箱水位 ${s.water_tank_level}cm\n`
+    env += `\n番茄适宜：温度22-28°C，湿度60-75%，光照15000-25000lx，pH 5.8-6.5。`
     env += `\n卡片空间有限！给出3条建议，每条格式：【标题】描述。标题≤8字，描述≤50字。有异常标预警。`
 
     // 确保使用温室总管
@@ -281,10 +281,10 @@ const environmentMetrics = computed(() => {
   return [
     { label: '温度', value: a ? `${a.temp} °C` : '--', range: '目标 22-28 °C', icon: Thermometer },
     { label: '湿度', value: a ? `${a.humidity}%` : '--', range: '目标 60-75%', icon: Droplets },
-    { label: 'CO2', value: a ? `${a.co2} ppm` : '--', range: '目标 500-900 ppm', icon: Gauge },
     { label: '光照', value: a ? `${a.illumination.toLocaleString()} lx` : '--', range: '目标 15,000-25,000 lx', icon: Sun },
     { label: 'pH', value: s ? `${s.ph_value}` : '--', range: '目标 5.8-6.5', icon: CloudSun },
-    { label: 'EC', value: s ? `${(s.soil_conductivity / 1000).toFixed(1)} mS/cm` : '--', range: '目标 1.4-2.2 mS/cm', icon: Gauge }
+    { label: 'EC', value: s ? `${s.soil_conductivity} μS/cm` : '--', range: '设备回传', icon: Gauge },
+    { label: '水位', value: s ? `${s.water_tank_level} cm` : '--', range: '水箱液位', icon: Droplets }
   ]
 })
 

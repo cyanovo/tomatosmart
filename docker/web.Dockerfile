@@ -3,15 +3,15 @@ FROM m.daocloud.io/docker.io/library/node:24-alpine AS development
 WORKDIR /app
 ENV TZ=Asia/Shanghai
 
-# 安装 pnpm
-RUN npm install -g pnpm@latest
+# 安装与 packageManager 声明一致的 pnpm 版本，避免 latest 与锁文件格式不兼容
+RUN npm install -g pnpm@10.11.0
 
 # 复制 package.json 和 pnpm-lock.yaml
 COPY ./web/package*.json ./
 COPY ./web/pnpm-lock.yaml* ./
 
 # 安装依赖
-RUN pnpm install --registry=https://registry.npmmirror.com
+RUN pnpm install --frozen-lockfile --registry=https://registry.npmmirror.com
 
 # 复制源代码
 COPY ./web .
@@ -25,8 +25,8 @@ EXPOSE 5173
 FROM m.daocloud.io/docker.io/library/node:24-alpine AS build-stage
 WORKDIR /app
 
-# 安装 pnpm
-RUN npm install -g pnpm@latest
+# 安装与 packageManager 声明一致的 pnpm 版本，避免 latest 与锁文件格式不兼容
+RUN npm install -g pnpm@10.11.0
 
 # 复制依赖文件
 COPY ./web/package*.json ./
